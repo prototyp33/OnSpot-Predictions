@@ -175,3 +175,4 @@ data/cleaned_parking_data_with_features.csv
 data/feature_engineered_data.csv
 data/barcelona_parking.parking_predictions.csv
 feature_engineered.json
+data/cleaned_OSM-parking_data.csv
