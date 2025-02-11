@@ -170,3 +170,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 .DS_Store
+notebooks/parking_zones_map.html
+data/cleaned_parking_data_with_features.csv
+data/feature_engineered_data.csv
+data/barcelona_parking.parking_predictions.csv
+feature_engineered.json
