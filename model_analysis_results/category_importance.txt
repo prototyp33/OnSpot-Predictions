@@ -1,0 +1,5 @@
+=== FEATURE IMPORTANCE BY CATEGORY ===
+
+time: 0.6345 (63.45%)
+weather: 0.0769 (7.69%)
+location: 0.0356 (3.56%)

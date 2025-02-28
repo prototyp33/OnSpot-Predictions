@@ -1,0 +1,16 @@
+{
+  "total_matches": 171072,
+  "unique_facilities": 225,
+  "match_quality": {
+    "Fair": 116928,
+    "Good": 35136,
+    "Excellent": 19008,
+    "Poor": 0
+  },
+  "distance_stats": {
+    "min": 4.744646075448743,
+    "max": 99.49342504892047,
+    "mean": 62.10529791014163,
+    "median": 65.75007208831737
+  }
+}

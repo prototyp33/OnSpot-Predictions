@@ -1,0 +1,117 @@
+{
+  "LOC_1": {
+    "best_weights": {
+      "traffic_sensitivity": 0.8,
+      "zone_influence": 0.8,
+      "weather_impact": 0.7,
+      "time_pattern": 0.9,
+      "capacity_factor": 0.7
+    },
+    "validation_metrics": {
+      "mse": 1061.245312214902,
+      "rmse": 32.57676030876769,
+      "mae": 27.005027481196848,
+      "r2": -1.467387874067712
+    },
+    "parking_type": "Public",
+    "location_factors": {
+      "downtown_influence": 0.8,
+      "residential_influence": 0.2,
+      "traffic_sensitivity": 0.5,
+      "capacity_factor": 0.4,
+      "event_impact": 0.3
+    }
+  },
+  "LOC_2": {
+    "best_weights": {
+      "traffic_sensitivity": 0.2,
+      "zone_influence": 0.8,
+      "weather_impact": 0.7,
+      "time_pattern": 0.7,
+      "capacity_factor": 0.5
+    },
+    "validation_metrics": {
+      "mse": 455.9971028317009,
+      "rmse": 21.354088667786804,
+      "mae": 17.139144197885756,
+      "r2": 0.47056265889171145
+    },
+    "parking_type": "Public",
+    "location_factors": {
+      "downtown_influence": 0.4,
+      "residential_influence": 0.6,
+      "traffic_sensitivity": 0.5,
+      "capacity_factor": 0.4,
+      "event_impact": 0.3
+    }
+  },
+  "LOC_3": {
+    "best_weights": {
+      "traffic_sensitivity": 0.8,
+      "zone_influence": 0.8,
+      "weather_impact": 0.7,
+      "time_pattern": 0.9,
+      "capacity_factor": 0.7
+    },
+    "validation_metrics": {
+      "mse": 965.8543446073569,
+      "rmse": 31.078197254785497,
+      "mae": 25.957480669893123,
+      "r2": -1.2043779914411883
+    },
+    "parking_type": "Public",
+    "location_factors": {
+      "downtown_influence": 0.8,
+      "residential_influence": 0.2,
+      "traffic_sensitivity": 0.5,
+      "capacity_factor": 0.4,
+      "event_impact": 0.3
+    }
+  },
+  "LOC_4": {
+    "best_weights": {
+      "traffic_sensitivity": 0.8,
+      "zone_influence": 0.8,
+      "weather_impact": 0.7,
+      "time_pattern": 0.9,
+      "capacity_factor": 0.7
+    },
+    "validation_metrics": {
+      "mse": 620.5187324123356,
+      "rmse": 24.91021341563206,
+      "mae": 21.34399055445009,
+      "r2": -0.3613155292850254
+    },
+    "parking_type": "Resident",
+    "location_factors": {
+      "downtown_influence": 0.4,
+      "residential_influence": 0.6,
+      "traffic_sensitivity": 0.5,
+      "capacity_factor": 0.4,
+      "event_impact": 0.3
+    }
+  },
+  "LOC_5": {
+    "best_weights": {
+      "traffic_sensitivity": 0.2,
+      "zone_influence": 0.8,
+      "weather_impact": 0.7,
+      "time_pattern": 0.7,
+      "capacity_factor": 0.7
+    },
+    "validation_metrics": {
+      "mse": 390.27816628702107,
+      "rmse": 19.755459151511033,
+      "mae": 14.915726412220657,
+      "r2": 0.5191153630890107
+    },
+    "parking_type": "Public",
+    "location_factors": {
+      "downtown_influence": 0.8,
+      "residential_influence": 0.2,
+      "traffic_sensitivity": 0.5,
+      "capacity_factor": 0.4,
+      "event_impact": 0.3
+    }
+  }
+}

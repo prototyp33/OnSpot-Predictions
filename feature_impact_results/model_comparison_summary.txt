@@ -1,0 +1,62 @@
+=== MODEL COMPARISON SUMMARY ===
+
+PERFORMANCE COMPARISON:
+-----------------------
+
+1. Location Specific Model with Advanced Features Features:
+   R² = 0.9998, RMSE = 0.3242, MAE = 0.1826
+   Training Time: 0.63 seconds
+
+2. Global Model with Advanced Features Features:
+   R² = 0.9963, RMSE = 1.6392, MAE = 1.1664
+   Training Time: 0.61 seconds
+
+3. Global Model with Basic Features Features:
+   R² = 0.7503, RMSE = 13.5115, MAE = 10.9194
+   Training Time: 0.24 seconds
+
+4. Location Specific Model with Basic Features Features:
+   R² = 0.7491, RMSE = 11.6837, MAE = 9.3280
+   Training Time: 0.27 seconds
+
+FEATURE ENGINEERING IMPACT:
+--------------------------
+Advanced features improved global model performance by:
+- R² improvement: 32.79%
+- RMSE reduction: 87.87%
+
+LOCATION-SPECIFIC VS GLOBAL MODEL:
+--------------------------------
+Location-specific models outperform the global model by:
+- R² improvement: 0.35%
+- RMSE reduction: 80.22%
+
+LOCATION-SPECIFIC INSIGHTS (Basic Features):
+------------------------------------------
+Top 3 best-performing locations:
+- Location LOC_2: R² = 0.8375, RMSE = 11.8294
+- Location LOC_5: R² = 0.8350, RMSE = 11.5710
+- Location LOC_1: R² = 0.7035, RMSE = 11.2925
+
+Top 3 worst-performing locations:
+- Location LOC_3: R² = 0.6692, RMSE = 12.0393
+- Location LOC_4: R² = 0.7004, RMSE = 11.6863
+- Location LOC_1: R² = 0.7035, RMSE = 11.2925
+
+LOCATION-SPECIFIC INSIGHTS (Advanced Features):
+------------------------------------------
+Top 3 best-performing locations:
+- Location LOC_4: R² = 0.9999, RMSE = 0.2037
+- Location LOC_2: R² = 0.9999, RMSE = 0.3178
+- Location LOC_3: R² = 0.9999, RMSE = 0.2467
+
+Top 3 worst-performing locations:
+- Location LOC_5: R² = 0.9996, RMSE = 0.5929
+- Location LOC_1: R² = 0.9998, RMSE = 0.2598
+- Location LOC_3: R² = 0.9999, RMSE = 0.2467
+
+RECOMMENDATIONS:
+---------------
+1. Use the Location Specific Model with Advanced Features Features for best performance.
+2. The advanced feature engineering significantly improves model performance.
+3. Consider using location-specific models for better accuracy, especially for locations with sufficient data.

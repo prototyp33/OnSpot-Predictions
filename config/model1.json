@@ -1,0 +1,78 @@
+{
+  "parking_patterns": {
+    "Public": {
+      "weekday_pattern": {
+        "0": 0.1, "1": 0.05, "2": 0.05, "3": 0.05, "4": 0.1, "5": 0.2,
+        "6": 0.4, "7": 0.6, "8": 0.8, "9": 0.9, "10": 0.9, "11": 0.9,
+        "12": 0.9, "13": 0.9, "14": 0.8, "15": 0.8, "16": 0.9, "17": 0.9,
+        "18": 0.8, "19": 0.7, "20": 0.6, "21": 0.4, "22": 0.3, "23": 0.2
+      },
+      "weekend_pattern": {
+        "0": 0.1, "1": 0.05, "2": 0.05, "3": 0.05, "4": 0.05, "5": 0.1,
+        "6": 0.2, "7": 0.3, "8": 0.4, "9": 0.5, "10": 0.6, "11": 0.7,
+        "12": 0.8, "13": 0.8, "14": 0.8, "15": 0.7, "16": 0.7, "17": 0.7,
+        "18": 0.6, "19": 0.5, "20": 0.4, "21": 0.3, "22": 0.2, "23": 0.1
+      }
+    },
+    "Resident": {
+      "weekday_pattern": {
+        "0": 0.8, "1": 0.9, "2": 0.9, "3": 0.9, "4": 0.8, "5": 0.7,
+        "6": 0.6, "7": 0.5, "8": 0.3, "9": 0.2, "10": 0.2, "11": 0.2,
+        "12": 0.2, "13": 0.2, "14": 0.2, "15": 0.3, "16": 0.4, "17": 0.5,
+        "18": 0.6, "19": 0.7, "20": 0.8, "21": 0.8, "22": 0.8, "23": 0.8
+      },
+      "weekend_pattern": {
+        "0": 0.7, "1": 0.8, "2": 0.8, "3": 0.8, "4": 0.8, "5": 0.7,
+        "6": 0.6, "7": 0.6, "8": 0.5, "9": 0.5, "10": 0.4, "11": 0.4,
+        "12": 0.3, "13": 0.3, "14": 0.3, "15": 0.4, "16": 0.5, "17": 0.6,
+        "18": 0.7, "19": 0.7, "20": 0.7, "21": 0.7, "22": 0.7, "23": 0.7
+      }
+    }
+  },
+  "weather_impact": {
+    "temperature": {"weight": 0.4, "optimal": 22, "range": 12},
+    "precipitation": {"weight": 0.6, "threshold": 1.2},
+    "wind_speed": {"weight": 0.3, "threshold": 18}
+  },
+  "temperature_comfort": {
+    "optimal_temp": 22,
+    "range": 10,
+    "impact": 0.3,
+    "winter_offset": -5,
+    "summer_offset": 2,
+    "spring_offset": 0,
+    "fall_offset": 0
+  },
+  "traffic": {
+    "base_level": 0.5,
+    "peak_hours": {
+      "morning": {"start": 7, "end": 9, "factor": 1.5},
+      "evening": {"start": 16, "end": 19, "factor": 1.4}
+    },
+    "weekday_factor": 1.2,
+    "weekend_factor": 0.8,
+    "holiday_factor": 0.6
+  },
+  "zone": {
+    "downtown": {"factor": 1.5, "radius": 2.0},
+    "residential": {"factor": 0.8, "radius": 5.0},
+    "commercial": {"factor": 1.2, "radius": 3.0},
+    "industrial": {"factor": 0.6, "radius": 8.0}
+  },
+  "capacity": {
+    "threshold_high": 0.8,
+    "threshold_medium": 0.5,
+    "threshold_low": 0.2,
+    "factor_high": 0.7,
+    "factor_medium": 1.0,
+    "factor_low": 1.2
+  },
+  "model_weights": {
+    "traffic_sensitivity": 0.6,
+    "zone_influence": 0.4,
+    "weather_impact": 0.5,
+    "time_pattern": 0.7,
+    "capacity_factor": 0.3
+  },
+  "ensemble_weight": 0.4
+} 

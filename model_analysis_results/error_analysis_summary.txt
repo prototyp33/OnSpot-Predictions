@@ -1,0 +1,37 @@
+=== ERROR ANALYSIS SUMMARY ===
+
+Overall Error Metrics:
+Mean Absolute Error: 8.7571
+Root Mean Squared Error: 11.1558
+R² Score: 0.8298
+
+Error by Time Period:
+Top 3 hours with highest errors:
+Hour 14: 12.1647
+Hour 8: 11.6749
+Hour 17: 11.1320
+
+Day of week errors (0=Monday, 6=Sunday):
+Day 2: 9.5668
+Day 4: 9.0730
+Day 5: 8.8967
+Day 1: 8.7821
+Day 3: 8.7333
+Day 6: 8.4028
+Day 0: 7.9655
+
+Weekend vs Weekday:
+Weekend error: 8.6075
+Weekday error: 8.8206
+
+Top 3 locations with highest errors:
+Location LOC_1: 9.5456
+Location LOC_3: 8.7355
+Location LOC_2: 8.7307
+
+Worst Predictions:
+- Actual: 32.67, Predicted: 69.02, Error: -36.35, Time: 2023-01-18 07:00:00, Location: LOC_4
+- Actual: 18.12, Predicted: 51.27, Error: -33.15, Time: 2023-01-14 16:00:00, Location: LOC_2
+- Actual: 46.80, Predicted: 79.25, Error: -32.45, Time: 2023-01-25 17:00:00, Location: LOC_5
+- Actual: 38.87, Predicted: 71.05, Error: -32.18, Time: 2023-01-24 08:00:00, Location: LOC_5
+- Actual: 59.52, Predicted: 91.38, Error: -31.86, Time: 2023-01-10 20:00:00, Location: LOC_4

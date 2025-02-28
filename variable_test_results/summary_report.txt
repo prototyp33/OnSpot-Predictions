@@ -1,0 +1,20 @@
+=== VARIABLE TESTING SUMMARY ===
+
+Top 5 Individual Variables:
+- parking_type: R² = 0.2100, RMSE = 24.0326
+- location_id: R² = 0.2096, RMSE = 24.0377
+- capacity: R² = 0.0999, RMSE = 25.6518
+- longitude: R² = 0.0795, RMSE = 25.9406
+- time_category: R² = 0.0652, RMSE = 26.1416
+
+Top Variable Groups:
+- all_numerical: R² = 0.8346, RMSE = 10.9972
+- all_variables: R² = 0.8294, RMSE = 11.1690
+- all_categorical: R² = 0.6217, RMSE = 16.6309
+
+Location-Specific Results:
+- Location LOC_2: R² = 0.8851, Top features: temperature, humidity, wind_speed, is_weekend_False, time_category_afternoon
+- Location LOC_5: R² = 0.8642, Top features: day, wind_speed, humidity, temperature, is_weekend_False
+- Location LOC_4: R² = 0.7410, Top features: day, is_weekend_True, wind_speed, day_of_week, weekday
+- Location LOC_1: R² = 0.6946, Top features: time_category_night, is_weekend_False, is_weekend_True, day_of_week, weekday
+- Location LOC_3: R² = 0.6847, Top features: day_of_week, time_category_afternoon, weekday, is_weekend_True, is_weekend_False
