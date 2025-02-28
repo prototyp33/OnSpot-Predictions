@@ -1,0 +1,408 @@
+{
+  "basic_stats": {
+    "total_matches": 171072,
+    "unique_facilities": 225,
+    "match_quality": {
+      "Fair": 116928,
+      "Good": 35136,
+      "Excellent": 19008,
+      "Poor": 0
+    },
+    "distance_stats": {
+      "min": 4.744646075448743,
+      "max": 99.49342504892047,
+      "mean": 62.10529791014163,
+      "median": 65.75007208831737
+    }
+  },
+  "hourly_stats": {
+    "0": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "1": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "2": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "3": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "4": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "5": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "6": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "7": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "8": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "9": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "10": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "11": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "12": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "13": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "14": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "15": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "16": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "17": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "18": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "19": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "20": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "21": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "22": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    },
+    "23": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 7128,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 4872,
+        "Good": 1464,
+        "Excellent": 792,
+        "Poor": 0
+      }
+    }
+  },
+  "dow_stats": {
+    "4": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 121176,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 82824,
+        "Good": 24888,
+        "Excellent": 13464,
+        "Poor": 0
+      }
+    },
+    "5": {
+      "distance_to_parking_mean": 62.11,
+      "distance_to_parking_count": 49896,
+      "distance_to_parking_std": 25.21,
+      "match_quality_<lambda>": {
+        "Fair": 34104,
+        "Good": 10248,
+        "Excellent": 5544,
+        "Poor": 0
+      }
+    }
+  },
+  "type_stats": {
+    "BLAVA": {
+      "distance_to_parking_mean": 56.657227006631885,
+      "distance_to_parking_count": 37152,
+      "distance_to_parking_min": 4.744646075448743,
+      "distance_to_parking_max": 98.71314832007543,
+      "match_quality_<lambda>": {
+        "Fair": 22752,
+        "Excellent": 8928,
+        "Good": 5472,
+        "Poor": 0
+      },
+      "tariff_numeric_mean": 2.362403100775194
+    },
+    "VERDA": {
+      "distance_to_parking_mean": 63.61669822530885,
+      "distance_to_parking_count": 133920,
+      "distance_to_parking_min": 6.587315412843722,
+      "distance_to_parking_max": 99.49342504892047,
+      "match_quality_<lambda>": {
+        "Fair": 94176,
+        "Good": 29664,
+        "Excellent": 10080,
+        "Poor": 0
+      },
+      "tariff_numeric_mean": 2.8021505376344087
+    }
+  },
+  "geo_stats": {
+    "0": {
+      "distance_to_parking_mean": 61.85750637482362,
+      "distance_to_parking_count": 41184,
+      "match_quality_<lambda>": {
+        "Fair": 28800,
+        "Good": 6336,
+        "Excellent": 6048,
+        "Poor": 0
+      },
+      "tipo_<lambda>": {
+        "VERDA": 32832,
+        "BLAVA": 8352
+      }
+    },
+    "1": {
+      "distance_to_parking_mean": 68.36099632052301,
+      "distance_to_parking_count": 34848,
+      "match_quality_<lambda>": {
+        "Fair": 27360,
+        "Good": 5472,
+        "Excellent": 2016,
+        "Poor": 0
+      },
+      "tipo_<lambda>": {
+        "VERDA": 26208,
+        "BLAVA": 8640
+      }
+    },
+    "2": {
+      "distance_to_parking_mean": 61.48482518942569,
+      "distance_to_parking_count": 40032,
+      "match_quality_<lambda>": {
+        "Fair": 25344,
+        "Good": 11520,
+        "Excellent": 3168,
+        "Poor": 0
+      },
+      "tipo_<lambda>": {
+        "VERDA": 38304,
+        "BLAVA": 1728
+      }
+    },
+    "3": {
+      "distance_to_parking_mean": 61.6711434643776,
+      "distance_to_parking_count": 20160,
+      "match_quality_<lambda>": {
+        "Fair": 13248,
+        "Good": 5472,
+        "Excellent": 1440,
+        "Poor": 0
+      },
+      "tipo_<lambda>": {
+        "VERDA": 15552,
+        "BLAVA": 4608
+      }
+    },
+    "4": {
+      "distance_to_parking_mean": 57.106382218218705,
+      "distance_to_parking_count": 34848,
+      "match_quality_<lambda>": {
+        "Fair": 22176,
+        "Excellent": 6336,
+        "Good": 6336,
+        "Poor": 0
+      },
+      "tipo_<lambda>": {
+        "VERDA": 21024,
+        "BLAVA": 13824
+      }
+    }
+  }
+}

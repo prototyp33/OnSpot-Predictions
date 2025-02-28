@@ -1,138 +1,138 @@
-# OnSpot Predictive Model
+# Parking Occupancy Prediction System
 
-**OnSpot** is a smart parking prediction system that integrates data from **OpenStreetMap (OSM)** and **Barcelona SIU** to forecast real-time parking availability. This project leverages historical parking data, spatial analysis, and machine learning to improve urban mobility by helping users find available parking spots efficiently.
+A machine learning system for predicting parking occupancy based on historical data and contextual features.
 
----
+## Overview
 
-## Features
+This project implements a complete machine learning pipeline for predicting parking occupancy:
 
-- **Data Integration**: Combines OSM and SIU datasets for comprehensive parking data.
-- **Predictive Modeling**: Utilizes machine learning algorithms to predict parking availability.
-- **Spatial Visualization**: Interactive maps for visualizing parking zones and prediction results.
-- **Data Cleaning and Feature Engineering**: Preprocessing steps for accurate and efficient predictions.
+1. **Data Preparation**: Clean and prepare raw parking data
+2. **Feature Engineering**: Create basic and advanced features
+3. **Cross-Validation**: Evaluate model performance using time series cross-validation
+4. **Hyperparameter Tuning**: Find optimal model configurations
+5. **Advanced Models**: Experiment with state-of-the-art models
+6. **Model Deployment**: Deploy the best models for production use
+7. **Model Monitoring**: Track model performance over time
 
----
-
-## Repository Structure
-
-```
-OnSpot_Predictive_Model/
-│
-├── data/                       # Raw, cleaned, and feature-engineered data
-│   ├── cleaned_OSM-parking_data.csv
-│   ├── feature_engineered_data.csv
-│   └── validated_merged_parking_data.csv
-│
-├── scripts/                    # Python scripts for data processing and modeling
-│   ├── mergedata1.py           # Script to merge OSM and SIU data
-│   ├── data_utils.py           # Utility functions for data handling
-│   ├── define_features.py      # Feature engineering scripts
-│   └── load_data.py            # Script to load and preprocess data
-│
-├── notebooks/                  # Jupyter notebooks for EDA and analysis
-│   ├── EDA_Exploration.ipynb   # Exploratory Data Analysis
-│   └── merge_analysis.ipynb    # Analysis of merged data
-│
-├── results/                    # Output files like visualizations and reports
-│   └── parking_zones_map.html  # Interactive map of parking zones
-│
-├── README.md                   # Project documentation
-├── requirements.txt            # List of dependencies
-└── .gitignore                  # Files and folders to be ignored by Git
-```
-
----
-
-## Getting Started
-
-### **1. Clone the Repository**
+## Installation
 
 ```bash
-git clone https://github.com/prototyp33/OnSpot-Predictions.git
-cd OnSpot-Predictive_Model
-```
+# Clone the repository
+git clone https://github.com/yourusername/parking-occupancy-prediction.git
+cd parking-occupancy-prediction
 
-### **2. Set Up the Environment**
+# Create a virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-Install the required Python packages:
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### **3. Run the Data Merging Script**
+## Usage
 
-Merge the OSM and SIU datasets:
+### End-to-End Pipeline
 
-```bash
-python scripts/mergedata1.py
-```
-
-This will generate the merged data file:
-- `data/validated_merged_parking_data.csv`
-
-### **4. Visualize the Results**
-
-Open the interactive map to visualize parking zones:
+Run the complete pipeline:
 
 ```bash
-open results/parking_zones_map.html
+python scripts/end_to_end_pipeline.py --data data/raw_data.csv
 ```
 
----
+Skip specific steps:
 
-## Data Sources
+```bash
+python scripts/end_to_end_pipeline.py --data data/raw_data.csv --skip prepare cv
+```
 
-- **OpenStreetMap (OSM)**: Provides geographical data including parking locations and restrictions.
-- **Barcelona SIU (Open Data BCN)**: Historical parking data from the city of Barcelona, used for occupancy and turnover predictions.
+### Individual Components
 
----
+Data preparation:
 
-## Key Scripts
+```bash
+python scripts/prepare_data.py --data data/raw_data.csv --output data/prepared_data.csv
+```
 
-- `mergedata1.py`: Merges OSM and SIU data, handles spatial matching, and validates merged data.
-- `data_utils.py`: Utility functions for loading, cleaning, and preprocessing data.
-- `define_features.py`: Script for creating and engineering features for the predictive model.
-- `load_data.py`: Loads datasets into the predictive pipeline.
+Cross-validation:
 
----
+```bash
+python scripts/cross_validation.py --data data/prepared_data.csv --n_splits 5
+```
 
-## Contributing
+Hyperparameter tuning:
 
-Contributions are welcome! To contribute:
+```bash
+python scripts/hyperparameter_tuning_cv.py --data data/prepared_data.csv --n_iter 50
+```
 
-1. **Fork** the repository.
-2. **Create a new branch**:
-   ```bash
-   git checkout -b feature/YourFeatureName
-   ```
-3. **Commit your changes**:
-   ```bash
-   git commit -m "Add your message here"
-   ```
-4. **Push to the branch**:
-   ```bash
-   git push origin feature/YourFeatureName
-   ```
-5. **Open a Pull Request**.
+Advanced models:
 
----
+```bash
+python scripts/advanced_models.py --data data/prepared_data.csv
+```
+
+Model deployment:
+
+```bash
+python scripts/deploy_models.py --source hyperparameter_tuning_results --target production_models
+```
+
+Model monitoring:
+
+```bash
+python scripts/model_monitoring.py --data data/prepared_data.csv
+```
+
+### Prediction API
+
+Start the prediction API:
+
+```bash
+python scripts/prediction_api.py
+```
+
+Or using Docker:
+
+```bash
+docker build -t parking-prediction-api .
+docker run -p 5000:5000 parking-prediction-api
+```
+
+### Dashboard
+
+Launch the model dashboard:
+
+```bash
+streamlit run scripts/model_dashboard_enhanced.py
+```
+
+## Project Structure
+
+```
+├── data/                      # Data files
+│   ├── raw_data.csv           # Raw input data
+│   └── prepared_data.csv      # Processed data
+├── scripts/                   # Python scripts
+│   ├── prepare_data.py        # Data preparation
+│   ├── cross_validation.py    # Cross-validation
+│   ├── hyperparameter_tuning_cv.py  # Hyperparameter tuning
+│   ├── advanced_models.py     # Advanced model training
+│   ├── deploy_models.py       # Model deployment
+│   ├── model_monitoring.py    # Performance monitoring
+│   ├── prediction_api.py      # Prediction API
+│   ├── model_dashboard.py     # Basic dashboard
+│   ├── model_dashboard_enhanced.py  # Enhanced dashboard
+│   └── end_to_end_pipeline.py # Complete pipeline
+├── production_models/         # Deployed models
+├── cross_validation_results/  # Cross-validation results
+├── hyperparameter_tuning_results/  # Tuning results
+├── advanced_models/           # Advanced model results
+├── model_monitoring/          # Monitoring results
+├── Dockerfile                 # Docker configuration
+├── requirements.txt           # Python dependencies
+└── README.md                  # Project documentation
+```
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## Contact
-
-For questions or suggestions, please reach out via [GitHub Issues](https://github.com/prototyp33/OnSpot-Predictions/issues).
-
----
-
-## Acknowledgments
-
-- **OpenStreetMap** contributors for providing detailed geographical data.
-- **Barcelona Open Data BCN** for offering valuable parking datasets.
-- **Folium** for interactive map visualizations.
-- **Scikit-learn** for machine learning tools and techniques.
+[MIT License](LICENSE)

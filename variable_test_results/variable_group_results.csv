@@ -1,0 +1,7 @@
+group,variables,num_variables,mse,rmse,r2
+all_numerical,"capacity, latitude, longitude, temperature, humidity, wind_speed, precipitation, hour, weekday, month, day, day_of_week",12,120.93829697197819,10.997194959260211,0.8345705177953833
+all_variables,"capacity, latitude, longitude, temperature, humidity, wind_speed, precipitation, hour, weekday, month, day, day_of_week, location_id, parking_type, is_weekend, is_holiday, time_category",17,124.74709270388837,11.169023802637739,0.8293605295490708
+all_categorical,"location_id, parking_type, is_weekend, is_holiday, time_category",5,276.5881243266223,16.630938768651102,0.6216597112997131
+location,location_id,1,577.8167286139583,24.037818715806104,0.2096141204475479
+time,"hour, day_of_week, month, is_weekend",4,652.3034315701985,25.54023162718378,0.10772500004729102
+weather,"temperature, humidity, wind_speed, precipitation",4,916.0273126161383,30.26594311459893,-0.2530185045228983

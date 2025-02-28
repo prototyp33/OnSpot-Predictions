@@ -1,0 +1,27 @@
+=== MODEL COMPARISON SUMMARY ===
+
+Model Performance (sorted by R²):
+- Random Forest: R² = 0.8298, RMSE = 11.1558, MAE = 8.7571, Training Time = 0.84s
+- Ensemble: R² = 0.8026, RMSE = 12.0120, MAE = 9.7290, Training Time = 0.00s
+- Gradient Boosting: R² = 0.7814, RMSE = 12.6409, MAE = 10.0626, Training Time = 0.30s
+- AdaBoost: R² = 0.6641, RMSE = 15.6713, MAE = 12.9103, Training Time = 0.06s
+- KNN: R² = 0.6594, RMSE = 15.7791, MAE = 11.9691, Training Time = 0.03s
+- SVR: R² = 0.5064, RMSE = 18.9962, MAE = 15.0245, Training Time = 0.21s
+- Linear Regression: R² = 0.3313, RMSE = 22.1106, MAE = 17.9431, Training Time = 0.01s
+- Ridge Regression: R² = 0.3311, RMSE = 22.1140, MAE = 17.9470, Training Time = 0.00s
+- Lasso Regression: R² = 0.3255, RMSE = 22.2063, MAE = 18.0311, Training Time = 0.01s
+- ElasticNet: R² = 0.3202, RMSE = 22.2936, MAE = 18.1946, Training Time = 0.00s
+
+Best Model: Random Forest
+
+Top 10 Important Features:
+- hour_cos: 0.2378
+- parking_type_Resident: 0.2017
+- hour: 0.1605
+- hour_sin: 0.1174
+- temperature: 0.0273
+- humidity: 0.0241
+- wind_speed: 0.0236
+- is_weekend_True: 0.0226
+- day_of_week: 0.0225
+- day_sin: 0.0205

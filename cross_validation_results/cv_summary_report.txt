@@ -1,0 +1,21 @@
+=== CROSS-VALIDATION SUMMARY REPORT ===
+
+Date: 2025-02-28 11:29:23
+
+GLOBAL MODEL RESULTS:
+--------------------
+
+Basic Features:
+  RMSE: 13.9769
+  R²: 0.7385
+  MAE: 11.0872
+
+Advanced Features:
+  RMSE: 2.1247
+  R²: 0.9940
+  MAE: 1.4499
+
+LOCATION-SPECIFIC MODEL RESULTS:
+-------------------------------
+
+Basic Features:

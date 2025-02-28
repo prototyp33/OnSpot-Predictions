@@ -1,0 +1,82 @@
+=== DATASET SUMMARY REPORT ===
+
+Total Observations: 3725
+Date Range: 2023-01-01 to 2023-02-01
+Number of Locations: 5
+Average Occupancy: 52.04
+Occupancy Range: 0.00 to 100.00
+Missing Values: 0
+Parking Type: Mixed: 1490
+Parking Type: Public: 1490
+Parking Type: Resident: 745
+
+=== LOCATION SUMMARY ===
+
+             count       mean        std       min        max
+location_id                                                  
+LOC_1          745  57.561303  19.525006  6.514758  100.00000
+LOC_2          745  37.246131  28.399017  0.000000  100.00000
+LOC_3          745  56.908865  19.991176  4.788474  100.00000
+LOC_4          745  71.069501  22.464740  8.862293  100.00000
+LOC_5          745  37.408665  27.941809  0.000000   99.46671
+
+=== TEMPORAL PATTERNS ===
+
+Hourly Patterns:
+hour
+0     51.579825
+1     47.190122
+2     46.981923
+3     44.303136
+4     41.169668
+5     41.899699
+6     35.085982
+7     29.050947
+8     49.636749
+9     46.478491
+10    52.800180
+11    54.360238
+12    56.631433
+13    58.238906
+14    61.402344
+15    63.935316
+16    64.934166
+17    66.991577
+18    69.938472
+19    52.261152
+20    56.665628
+21    49.757150
+22    55.046444
+23    52.608692
+
+Daily Patterns:
+day_name
+Monday       54.084020
+Tuesday      53.631436
+Wednesday    52.772474
+Thursday     52.889727
+Friday       53.799195
+Saturday     48.718416
+Sunday       48.375717
+
+Monthly Patterns:
+month_name
+January      52.049286
+February     44.306326
+March              NaN
+April              NaN
+May                NaN
+June               NaN
+July               NaN
+August             NaN
+September          NaN
+October            NaN
+November           NaN
+December           NaN
+
+=== WEATHER CORRELATIONS ===
+
+temperature      0.170051
+humidity        -0.144715
+wind_speed      -0.025311
+precipitation   -0.026601

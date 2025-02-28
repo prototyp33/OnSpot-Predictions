@@ -1,0 +1,55 @@
+=== CORRELATION ANALYSIS SUMMARY ===
+
+TOP 10 VARIABLES BY AVERAGE ABSOLUTE CORRELATION:
+1. capacity: Avg=0.3092 (P=0.3316, S=0.3413, K=0.2545)
+2. hour_sin: Avg=0.2733 (P=-0.2918, S=-0.3074, K=-0.2206)
+3. longitude: Avg=0.2496 (P=-0.3105, S=-0.2558, K=-0.1826)
+4. hour: Avg=0.2025 (P=0.2037, S=0.2261, K=0.1776)
+5. temperature: Avg=0.1652 (P=0.1701, S=0.1939, K=0.1317)
+6. humidity: Avg=0.1410 (P=-0.1447, S=-0.1661, K=-0.1122)
+7. latitude: Avg=0.0948 (P=-0.1451, S=0.0747, K=0.0644)
+8. hour_cos: Avg=0.0851 (P=-0.1044, S=-0.0934, K=-0.0577)
+9. weekday: Avg=0.0662 (P=-0.0706, S=-0.0749, K=-0.0532)
+10. day_of_week: Avg=0.0662 (P=-0.0706, S=-0.0749, K=-0.0532)
+
+TOP 5 VARIABLES BY PEARSON CORRELATION:
+1. capacity: 0.3316
+2. longitude: -0.3105
+3. hour_sin: -0.2918
+4. hour: 0.2037
+5. temperature: 0.1701
+
+TOP 5 VARIABLES BY SPEARMAN CORRELATION:
+1. capacity: 0.3413
+2. hour_sin: -0.3074
+3. longitude: -0.2558
+4. hour: 0.2261
+5. temperature: 0.1939
+
+TOP 5 VARIABLES BY KENDALL CORRELATION:
+1. capacity: 0.2545
+2. hour_sin: -0.2206
+3. longitude: -0.1826
+4. hour: 0.1776
+5. temperature: 0.1317
+
+TOP CATEGORICAL VARIABLES BY EFFECT SIZE:
+1. location_id: Eta²=0.2284, p-value=0.0000
+2. parking_type: Eta²=0.2283, p-value=0.0000
+3. time_category: Eta²=0.0718, p-value=0.0000
+4. is_weekend: Eta²=0.0068, p-value=0.0000
+5. is_holiday: Eta²=0.0004, p-value=0.2444
+
+TOP VARIABLES WITH NONLINEAR RELATIONSHIPS:
+1. hour_cos: Improvement=0.1260, Quadratic R²=0.6598, Linear R²=0.5338
+2. weekday: Improvement=0.1100, Quadratic R²=0.7866, Linear R²=0.6766
+3. day_of_week: Improvement=0.1100, Quadratic R²=0.7866, Linear R²=0.6766
+4. hour: Improvement=0.0651, Quadratic R²=0.4779, Linear R²=0.4127
+5. humidity: Improvement=0.0459, Quadratic R²=0.9404, Linear R²=0.8945
+
+RECOMMENDATIONS:
+1. Focus on the top variables by average absolute correlation for feature selection.
+2. Consider nonlinear transformations for variables with high nonlinear improvement.
+3. For categorical variables with high effect size, consider one-hot encoding or target encoding.
+4. Variables with high Spearman but low Pearson correlation may benefit from rank transformation.
+5. Consider interaction terms between highly correlated variables.

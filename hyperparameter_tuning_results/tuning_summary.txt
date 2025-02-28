@@ -1,0 +1,79 @@
+=== HYPERPARAMETER TUNING SUMMARY ===
+
+Date: 2025-02-28 11:41:28
+
+GLOBAL MODELS:
+-------------
+
+RF with basic features:
+  RMSE: -20.4285
+  Best parameters:
+    - model__max_depth: 3
+    - model__max_features: log2
+    - model__min_samples_leaf: 6
+    - model__min_samples_split: 13
+    - model__n_estimators: 394
+
+RF with advanced features:
+  RMSE: -18.3075
+  Best parameters:
+    - model__max_depth: 3
+    - model__max_features: log2
+    - model__min_samples_leaf: 6
+    - model__min_samples_split: 13
+    - model__n_estimators: 394
+
+GBM with basic features:
+  RMSE: -14.6075
+  Best parameters:
+    - model__learning_rate: 0.29266052670545584
+    - model__max_depth: 8
+    - model__max_features: log2
+    - model__min_samples_leaf: 9
+    - model__min_samples_split: 3
+    - model__n_estimators: 389
+    - model__subsample: 0.6205127330130058
+
+GBM with advanced features:
+  RMSE: -5.9143
+  Best parameters:
+    - model__learning_rate: 0.29266052670545584
+    - model__max_depth: 8
+    - model__max_features: log2
+    - model__min_samples_leaf: 9
+    - model__min_samples_split: 3
+    - model__n_estimators: 389
+    - model__subsample: 0.6205127330130058
+
+Best global model: RF with basic features (RMSE: -20.4285)
+
+LOCATION-SPECIFIC MODELS:
+------------------------
+
+GBM with advanced features:
+  Average RMSE: 0.5824
+  Best location: LOC_1 (RMSE: 0.4889)
+  Worst location: LOC_4 (RMSE: 0.7440)
+
+RF with advanced features:
+  Average RMSE: 1.1977
+  Best location: LOC_1 (RMSE: 1.0158)
+  Worst location: LOC_4 (RMSE: 1.4220)
+
+RF with basic features:
+  Average RMSE: 11.1783
+  Best location: LOC_4 (RMSE: 10.2871)
+  Worst location: LOC_5 (RMSE: 11.9284)
+
+GBM with basic features:
+  Average RMSE: 11.6516
+  Best location: LOC_4 (RMSE: 11.0917)
+  Worst location: LOC_2 (RMSE: 12.0246)
+
+Best location-specific model: GBM with advanced features (Avg RMSE: 0.5824)
+
+RECOMMENDATION:
+--------------
+
+Use a global RF model with basic features.
+Location-specific models do not provide significant improvement over the global model.
