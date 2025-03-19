@@ -12,6 +12,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple, Union
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -32,7 +33,7 @@ except ImportError as e:
     logger.error(f"Failed to import required modules: {e}")
     raise
 
-# Default thresholds for Supabase monitoring
+# Default thresholds for Supabase monitoring - fallback if config file is not available
 DEFAULT_SUPABASE_THRESHOLDS = {
     "latency_threshold_ms": 500,
     "p95_latency_threshold_ms": 1000,
@@ -44,26 +45,69 @@ DEFAULT_SUPABASE_THRESHOLDS = {
 }
 
 
+def load_config(config_path: str = None) -> Dict[str, Any]:
+    """
+    Load configuration from the specified JSON file.
+    
+    Args:
+        config_path: Path to the config file
+        
+    Returns:
+        Dictionary containing configuration values
+    """
+    if config_path is None:
+        # Use default path if none provided
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'config',
+            'retraining_config.json'
+        )
+    
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        logger.info(f"Loaded configuration from {config_path}")
+        return config
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logger.warning(f"Failed to load config from {config_path}: {e}. Using default values.")
+        return {"supabase_thresholds": DEFAULT_SUPABASE_THRESHOLDS}
+
+
 class SupabasePerformanceMonitorExtension:
     """
     Extension to integrate Supabase metrics into the existing performance monitoring system.
     """
     
-    def __init__(self, performance_monitor: PerformanceMonitor):
+    def __init__(self, performance_monitor: PerformanceMonitor, config_path: Optional[str] = None):
         """
         Initialize the Supabase performance monitor extension.
         
         Args:
             performance_monitor: The existing performance monitor to extend
+            config_path: Optional path to config file
         """
         self.performance_monitor = performance_monitor
         self.supabase_monitor = get_monitor()
         
+        # Load configuration from file
+        self.full_config = load_config(config_path)
+        
+        # Get Supabase thresholds from config
+        config_thresholds = self.full_config.get('supabase_thresholds', {})
+        
         # Load configuration or use defaults
         self.config = self.performance_monitor.config.get('supabase_thresholds', {})
-        for key, value in DEFAULT_SUPABASE_THRESHOLDS.items():
+        
+        # Update with values from config file, falling back to defaults for missing values
+        for key, default_value in DEFAULT_SUPABASE_THRESHOLDS.items():
             if key not in self.config:
-                self.config[key] = value
+                # Use config file value or default if not in config file
+                self.config[key] = config_thresholds.get(key, default_value)
+        
+        # Initialize cache for health metrics
+        self.health_cache = None
+        self.last_cache_time = None
+        self.cache_ttl_seconds = config_thresholds.get('cache_ttl_seconds', 60)  # Default 60 seconds TTL
         
         # Register Supabase metrics with the performance monitor
         self._register_supabase_metrics()
@@ -234,6 +278,16 @@ class SupabasePerformanceMonitorExtension:
         Returns:
             Dictionary with health status information
         """
+        # Check if we have a valid cached result
+        current_time = time.time()
+        if (self.health_cache is not None and self.last_cache_time is not None and 
+            current_time - self.last_cache_time < self.cache_ttl_seconds):
+            logger.debug(f"Using cached Supabase health metrics (age: {current_time - self.last_cache_time:.1f}s)")
+            return self.health_cache
+        
+        # Cache miss or expired, get fresh metrics
+        logger.debug("Cache miss/expired, fetching fresh Supabase health metrics")
+        
         # Get metrics from the monitor
         metrics = self.supabase_monitor.get_health_metrics()
         
@@ -281,14 +335,45 @@ class SupabasePerformanceMonitorExtension:
         elif alert_level == "critical":
             status = "unhealthy"
         
-        return {
+        # Create the health status result
+        health_status = {
             "status": status,
             "alert_level": alert_level,
             "issues": issues,
             "metrics": metrics,
             "timestamp": datetime.now().isoformat()
         }
+        
+        # Update the cache
+        self.health_cache = health_status
+        self.last_cache_time = current_time
+        
+        return health_status
     
+    def invalidate_health_cache(self) -> None:
+        """
+        Invalidate the health metrics cache, forcing a fresh fetch on next request.
+        """
+        self.health_cache = None
+        self.last_cache_time = None
+        logger.debug("Supabase health metrics cache invalidated")
+    
+    def set_cache_ttl(self, ttl_seconds: int) -> None:
+        """
+        Set the time-to-live for the cache in seconds.
+        
+        Args:
+            ttl_seconds: Cache TTL in seconds
+        """
+        if ttl_seconds < 0:
+            raise ValueError("Cache TTL cannot be negative")
+            
+        self.cache_ttl_seconds = ttl_seconds
+        logger.debug(f"Supabase health metrics cache TTL set to {ttl_seconds} seconds")
+        
+        # Invalidate current cache
+        self.invalidate_health_cache()
+        
     def generate_supabase_performance_report(self) -> str:
         """
         Generate a comprehensive report on Supabase performance.
@@ -296,6 +381,7 @@ class SupabasePerformanceMonitorExtension:
         Returns:
             Formatted report string
         """
+        # Use cached health status if available
         health = self.get_latest_supabase_health()
         metrics = health['metrics']
         
@@ -415,13 +501,16 @@ class SupabasePerformanceMonitorExtension:
         return "\n".join(report)
 
 
-def integrate_supabase_monitoring() -> Union[SupabasePerformanceMonitorExtension, None]:
+def integrate_supabase_monitoring(config_path: Optional[str] = None) -> Union[SupabasePerformanceMonitorExtension, None]:
     """
     Integrate Supabase monitoring with the existing performance monitoring system.
     
     This function creates and returns a SupabasePerformanceMonitorExtension instance
     if the required components are available. Otherwise, it returns None.
     
+    Args:
+        config_path: Optional path to configuration file
+        
     Returns:
         A SupabasePerformanceMonitorExtension instance or None
     """
@@ -441,8 +530,8 @@ def integrate_supabase_monitoring() -> Union[SupabasePerformanceMonitorExtension
         if hasattr(performance_monitor, 'supabase_extension'):
             return performance_monitor.supabase_extension
         
-        # Create and return the extension
-        return SupabasePerformanceMonitorExtension(performance_monitor)
+        # Create and return the extension with config path
+        return SupabasePerformanceMonitorExtension(performance_monitor, config_path)
     
     except ImportError as e:
         logger.error(f"Failed to integrate Supabase monitoring: {e}")

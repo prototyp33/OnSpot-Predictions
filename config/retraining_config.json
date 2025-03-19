@@ -41,5 +41,34 @@
     "level": "INFO",
     "file": "logs/retraining.log",
     "rotation": "1 week"
+  },
+  "model_settings": {
+    "retraining_threshold": 0.1,
+    "max_drift_allowed": 0.3,
+    "min_accuracy_required": 0.75
+  },
+  "data_drift_settings": {
+    "ks_threshold": 0.1,
+    "psi_threshold": 0.2,
+    "correlation_change_threshold": 0.3
+  },
+  "monitoring_settings": {
+    "check_frequency_hours": 24,
+    "alert_on_drift": true,
+    "auto_retrain": false
+  },
+  "supabase_thresholds": {
+    "latency_threshold_ms": 500,
+    "p95_latency_threshold_ms": 1000,
+    "p99_latency_threshold_ms": 2000,
+    "operation_failure_rate": 0.05,
+    "connection_failure_rate": 0.10,
+    "max_error_count": 100,
+    "alert_window_minutes": 15
+  },
+  "notification_settings": {
+    "email_alerts": false,
+    "slack_alerts": true,
+    "alert_severity_threshold": "warning"
   }
 } 
