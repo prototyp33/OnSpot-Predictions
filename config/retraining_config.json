@@ -1,0 +1,45 @@
+{
+  "time_based": {
+    "enabled": true,
+    "default_interval_days": 30,
+    "maintenance_windows": {
+      "global_model": {
+        "day_of_month": 1,
+        "hour": 3,
+        "minute": 0
+      },
+      "location_models": {
+        "day_of_week": 1,  // Monday
+        "hour": 2,
+        "minute": 30
+      }
+    }
+  },
+  "data_volume": {
+    "enabled": true,
+    "min_new_samples": 5000
+  },
+  "performance": {
+    "enabled": true,
+    "rmse_threshold": 0.15,  // 15% relative increase
+    "r2_threshold": 0.1,     // 0.1 absolute decrease
+    "min_consecutive_degradations": 3
+  },
+  "drift": {
+    "enabled": true,
+    "drift_threshold": 0.6,
+    "min_drifted_features": 3
+  },
+  "retraining": {
+    "feature_set": "advanced",
+    "train_location_models": true,
+    "validation_split": 0.2,
+    "auto_deploy": true,
+    "deployment_metric_threshold": 0.9
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "logs/retraining.log",
+    "rotation": "1 week"
+  }
+} 

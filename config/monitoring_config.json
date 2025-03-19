@@ -1,0 +1,57 @@
+{
+    "drift_thresholds": {
+        "ks_statistic": 0.1,
+        "mean_difference": 0.1,
+        "std_difference": 0.2,
+        "p_value_threshold": 0.05
+    },
+    "performance_thresholds": {
+        "accuracy_drop": 0.05,
+        "precision_drop": 0.05,
+        "recall_drop": 0.05,
+        "f1_drop": 0.05,
+        "rmse_increase": 0.1,
+        "mae_increase": 0.1
+    },
+    "monitoring": {
+        "check_frequency_hours": 24,
+        "baseline_update_days": 30,
+        "history_retention_days": 90,
+        "alert_channels": [
+            "log",
+            "email"
+        ],
+        "email_notifications": {
+            "enabled": true,
+            "recipients": [
+                "ml-team@example.com"
+            ],
+            "severity_levels": [
+                "warning",
+                "critical"
+            ]
+        }
+    },
+    "storage": {
+        "metrics_path": "data/monitoring/metrics_history",
+        "reports_path": "data/monitoring/reports",
+        "log_path": "logs/monitoring.log"
+    },
+    "dynamic_scheduling": {
+        "enabled": true,
+        "base_interval_days": 30,
+        "adjustment_limits": {
+            "min_interval_days": 7,
+            "max_interval_days": 60
+        },
+        "drift_thresholds": {
+            "low": 0.1,
+            "medium": 0.3,
+            "high": 0.5
+        },
+        "performance_thresholds": {
+            "rmse_degradation": 0.15,
+            "accuracy_drop": 0.05
+        }
+    }
+}
