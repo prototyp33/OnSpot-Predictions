@@ -13,6 +13,7 @@ import random
 import json
 import logging
 import argparse
+import threading
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
@@ -55,28 +56,34 @@ class SupabaseSimulator:
         self.latency_variance = latency_variance
         self.connected = False
         self.monitor = get_monitor()
+        # Add a lock for thread safety
+        self.lock = threading.RLock()
         logger.info("Supabase simulator initialized")
     
     @monitor_connection
     def connect(self):
         """Simulate connecting to Supabase."""
-        # Simulate connection time
-        latency = self._simulate_latency()
-        time.sleep(latency / 1000)  # Convert ms to seconds
-        
-        # Simulate potential connection failure
-        if random.random() < self.error_rate:
-            self.connected = False
-            raise Exception("Simulated connection failure")
-        
-        self.connected = True
-        logger.info(f"Connected to Supabase (simulated latency: {latency:.2f}ms)")
-        return True
+        # Thread-safe operation
+        with self.lock:
+            # Simulate connection time
+            latency = self._simulate_latency()
+            time.sleep(latency / 1000)  # Convert ms to seconds
+            
+            # Simulate potential connection failure
+            if random.random() < self.error_rate:
+                self.connected = False
+                raise Exception("Simulated connection failure")
+            
+            self.connected = True
+            logger.info(f"Connected to Supabase (simulated latency: {latency:.2f}ms)")
+            return True
     
     def disconnect(self):
         """Simulate disconnecting from Supabase."""
-        self.connected = False
-        logger.info("Disconnected from Supabase")
+        # Thread-safe operation
+        with self.lock:
+            self.connected = False
+            logger.info("Disconnected from Supabase")
     
     @monitor_operation("insert", "drift_analysis")
     def insert_drift_analysis(self, records):
@@ -89,18 +96,20 @@ class SupabaseSimulator:
         Returns:
             Dict with operation result
         """
-        self._check_connection()
-        
-        # Simulate operation time (more records = more time)
-        latency = self._simulate_latency(multiplier=records/10)
-        time.sleep(latency / 1000)
-        
-        # Simulate potential operation failure
-        if random.random() < self.error_rate:
-            raise Exception("Simulated insert failure in drift_analysis table")
-        
-        logger.info(f"Inserted {records} records into drift_analysis (simulated latency: {latency:.2f}ms)")
-        return {"success": True, "records": records}
+        # Thread-safe operation
+        with self.lock:
+            self._check_connection()
+            
+            # Simulate operation time (more records = more time)
+            latency = self._simulate_latency(multiplier=records/10)
+            time.sleep(latency / 1000)
+            
+            # Simulate potential operation failure
+            if random.random() < self.error_rate:
+                raise Exception("Simulated insert failure in drift_analysis table")
+            
+            logger.info(f"Inserted {records} records into drift_analysis (simulated latency: {latency:.2f}ms)")
+            return {"success": True, "records": records}
     
     @monitor_operation("query", "drift_analysis")
     def query_drift_analysis(self, filter_criteria=None):
@@ -113,20 +122,22 @@ class SupabaseSimulator:
         Returns:
             Dict with operation result
         """
-        self._check_connection()
-        
-        # Simulate operation time
-        latency = self._simulate_latency()
-        time.sleep(latency / 1000)
-        
-        # Simulate potential operation failure
-        if random.random() < self.error_rate:
-            raise Exception("Simulated query failure in drift_analysis table")
-        
-        # Simulate result set
-        result_count = random.randint(1, 50)
-        logger.info(f"Queried drift_analysis with {result_count} results (simulated latency: {latency:.2f}ms)")
-        return {"success": True, "results": result_count}
+        # Thread-safe operation
+        with self.lock:
+            self._check_connection()
+            
+            # Simulate operation time
+            latency = self._simulate_latency()
+            time.sleep(latency / 1000)
+            
+            # Simulate potential operation failure
+            if random.random() < self.error_rate:
+                raise Exception("Simulated query failure in drift_analysis table")
+            
+            # Simulate result set
+            result_count = random.randint(1, 50)
+            logger.info(f"Queried drift_analysis with {result_count} results (simulated latency: {latency:.2f}ms)")
+            return {"success": True, "results": result_count}
     
     @monitor_operation("insert", "retraining_events")
     def insert_retraining_event(self):
@@ -136,18 +147,20 @@ class SupabaseSimulator:
         Returns:
             Dict with operation result
         """
-        self._check_connection()
-        
-        # Simulate operation time
-        latency = self._simulate_latency()
-        time.sleep(latency / 1000)
-        
-        # Simulate potential operation failure
-        if random.random() < self.error_rate:
-            raise Exception("Simulated insert failure in retraining_events table")
-        
-        logger.info(f"Inserted retraining event (simulated latency: {latency:.2f}ms)")
-        return {"success": True, "records": 1}
+        # Thread-safe operation
+        with self.lock:
+            self._check_connection()
+            
+            # Simulate operation time
+            latency = self._simulate_latency()
+            time.sleep(latency / 1000)
+            
+            # Simulate potential operation failure
+            if random.random() < self.error_rate:
+                raise Exception("Simulated insert failure in retraining_events table")
+            
+            logger.info(f"Inserted retraining event (simulated latency: {latency:.2f}ms)")
+            return {"success": True, "records": 1}
     
     @monitor_operation("query", "business_metrics")
     def query_business_metrics(self):
@@ -157,20 +170,22 @@ class SupabaseSimulator:
         Returns:
             Dict with operation result
         """
-        self._check_connection()
-        
-        # Simulate operation time
-        latency = self._simulate_latency()
-        time.sleep(latency / 1000)
-        
-        # Simulate potential operation failure
-        if random.random() < self.error_rate:
-            raise Exception("Simulated query failure in business_metrics table")
-        
-        # Simulate result set
-        result_count = random.randint(1, 20)
-        logger.info(f"Queried business_metrics with {result_count} results (simulated latency: {latency:.2f}ms)")
-        return {"success": True, "results": result_count}
+        # Thread-safe operation
+        with self.lock:
+            self._check_connection()
+            
+            # Simulate operation time
+            latency = self._simulate_latency()
+            time.sleep(latency / 1000)
+            
+            # Simulate potential operation failure
+            if random.random() < self.error_rate:
+                raise Exception("Simulated query failure in business_metrics table")
+            
+            # Simulate result set
+            result_count = random.randint(1, 20)
+            logger.info(f"Queried business_metrics with {result_count} results (simulated latency: {latency:.2f}ms)")
+            return {"success": True, "results": result_count}
     
     @monitor_operation("insert", "system_health")
     def insert_system_health(self):
@@ -180,18 +195,20 @@ class SupabaseSimulator:
         Returns:
             Dict with operation result
         """
-        self._check_connection()
-        
-        # Simulate operation time
-        latency = self._simulate_latency()
-        time.sleep(latency / 1000)
-        
-        # Simulate potential operation failure
-        if random.random() < self.error_rate:
-            raise Exception("Simulated insert failure in system_health table")
-        
-        logger.info(f"Inserted system health record (simulated latency: {latency:.2f}ms)")
-        return {"success": True, "records": 1}
+        # Thread-safe operation
+        with self.lock:
+            self._check_connection()
+            
+            # Simulate operation time
+            latency = self._simulate_latency()
+            time.sleep(latency / 1000)
+            
+            # Simulate potential operation failure
+            if random.random() < self.error_rate:
+                raise Exception("Simulated insert failure in system_health table")
+            
+            logger.info(f"Inserted system health record (simulated latency: {latency:.2f}ms)")
+            return {"success": True, "records": 1}
     
     def _check_connection(self):
         """Check if connected and raise an exception if not."""
