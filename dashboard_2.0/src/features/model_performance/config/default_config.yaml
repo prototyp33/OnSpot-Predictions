@@ -1,0 +1,61 @@
+# Default configuration for Model Performance Monitoring System
+
+metrics:
+  rmse_threshold: 0.5
+  mae_threshold: 0.4
+  r2_min_threshold: 0.7
+  mape_threshold: 0.15
+  prediction_delay_threshold_ms: 100
+  metrics_window_size: 86400  # 24 hours in seconds
+  update_frequency_seconds: 300  # 5 minutes
+
+drift:
+  feature_drift_threshold: 0.7
+  concept_drift_threshold: 0.1
+  min_samples_drift: 1000
+  drift_check_frequency: 3600  # 1 hour in seconds
+  reference_update_frequency: 604800  # 7 days in seconds
+
+data_quality:
+  missing_value_threshold: 0.1
+  outlier_std_threshold: 3.0
+  correlation_change_threshold: 0.2
+  quality_score_threshold: 0.8
+  min_samples_quality: 100
+  check_frequency: 1800  # 30 minutes in seconds
+
+health:
+  error_rate_threshold: 0.05
+  latency_threshold_ms: 100
+  memory_threshold_mb: 1024
+  cpu_threshold_percent: 80
+  health_check_frequency: 60  # 1 minute in seconds
+  resource_check_frequency: 300  # 5 minutes in seconds
+
+alerts:
+  max_alerts_per_hour: 10
+  alert_cooldown_minutes: 15
+  auto_resolve_timeout: 86400  # 24 hours in seconds
+  notification_channels:
+    - email
+    - slack
+
+auto_response:
+  min_confidence_threshold: 0.8
+  max_daily_retrains: 2
+  max_daily_threshold_adjustments: 5
+  action_cooldown_minutes: 30
+  escalation_timeout_minutes: 30
+  retrain_min_samples: 5000
+  cleanup_min_improvement: 0.1
+
+dashboard:
+  update_interval_seconds: 60
+  max_points_per_plot: 1000
+  default_time_range: 86400  # 24 hours in seconds
+  theme: "BOOTSTRAP"
+  custom_time_ranges:
+    "1H": 3600
+    "1D": 86400
+    "1W": 604800
+    "1M": 2592000  # 30 days in seconds 

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - MODEL_DIR=models/production
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  dashboard:
+    build:
+      context: ./onspot-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:8000
+    restart: unless-stopped
+
+  monitoring:
+    build:
+      context: .
+      dockerfile: monitoring/Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./monitoring:/app/monitoring
+    environment:
+      - MODEL_DIR=models/production
+      - LOG_LEVEL=INFO
+    depends_on:
+      - api
+    restart: unless-stopped
+
+networks:
+  default:
+    name: onspot-network 
