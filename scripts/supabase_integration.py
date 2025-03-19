@@ -20,6 +20,19 @@ dotenv.load_dotenv()
 # Import supabase client
 from supabase import create_client, Client
 
+# Import Supabase monitoring tools
+try:
+    from scripts.supabase_monitor import monitor_operation, monitor_connection
+except ImportError:
+    # Create no-op decorators if the module is not available
+    def monitor_operation(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    
+    def monitor_connection(func):
+        return func
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -54,6 +67,7 @@ class SupabaseClient:
         
         self.supabase = None
         
+    @monitor_connection
     def connect(self):
         """Establish a Supabase connection."""
         if self.is_dummy:
@@ -83,6 +97,7 @@ class SupabaseClient:
         """Context manager exit."""
         self.disconnect()
         
+    @monitor_operation(operation_type="insert", table_name="drift_analysis")
     def store_drift_analysis(
         self, 
         model_id: str, 
@@ -179,6 +194,7 @@ class SupabaseClient:
         """
         return [str(item) for item in items]
             
+    @monitor_operation(operation_type="insert", table_name="retraining_events")
     def store_retraining_event(
         self,
         model_id: str,
@@ -232,6 +248,7 @@ class SupabaseClient:
             logger.error(f"Failed to store retraining event: {e}")
             return False
             
+    @monitor_operation(operation_type="insert", table_name="business_metrics")
     def store_business_metric(
         self,
         metric_name: str,
@@ -284,6 +301,7 @@ class SupabaseClient:
             logger.error(f"Failed to store business metric: {e}")
             return False
             
+    @monitor_operation(operation_type="insert", table_name="location_metrics")
     def store_location_metrics(
         self,
         location_id: str,
@@ -341,6 +359,7 @@ class SupabaseClient:
             logger.error(f"Failed to store location metrics: {e}")
             return False
             
+    @monitor_operation(operation_type="insert", table_name="system_health")
     def store_system_health(
         self,
         component: str,
@@ -393,6 +412,7 @@ class SupabaseClient:
             logger.error(f"Failed to store system health: {e}")
             return False
             
+    @monitor_operation(operation_type="query", table_name="drift_analysis")
     def get_drift_metrics(
         self,
         model_id: Optional[str] = None,
@@ -451,6 +471,7 @@ class SupabaseClient:
             logger.error(f"Failed to retrieve drift metrics: {e}")
             return []
             
+    @monitor_operation(operation_type="query", table_name="retraining_events")
     def get_retraining_events(
         self,
         model_id: Optional[str] = None,
