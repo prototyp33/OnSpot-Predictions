@@ -13,12 +13,33 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Union
 import uuid
 import dotenv
+import threading
+import backoff
+import time
+import random
+from requests.exceptions import RequestException
+import ssl
+import httpx
+from functools import wraps
 
 # Load environment variables from .env file
 dotenv.load_dotenv()
 
 # Import supabase client
 from supabase import create_client, Client
+
+# Import Supabase monitoring tools
+try:
+    from scripts.supabase_monitor import monitor_operation, monitor_connection
+except ImportError:
+    # Create no-op decorators if the module is not available
+    def monitor_operation(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    
+    def monitor_connection(func):
+        return func
 
 # Configure logging
 logging.basicConfig(
@@ -53,7 +74,29 @@ class SupabaseClient:
             self.is_dummy = False
         
         self.supabase = None
+        # Add a lock for thread safety
+        self.lock = threading.RLock()
+        # Retry configuration
+        self.max_retries = 3
+        self.retry_delay_base = 1  # Base delay in seconds
         
+    def _get_retry_delay(self, retry_count: int) -> float:
+        """
+        Calculate exponential backoff delay with jitter.
+        
+        Args:
+            retry_count: Current retry attempt number
+            
+        Returns:
+            Delay in seconds before next retry
+        """
+        # Exponential backoff: 2^retry_count seconds
+        delay = min(60, self.retry_delay_base * (2 ** retry_count))
+        # Add jitter (±10%)
+        jitter = random.uniform(-0.1 * delay, 0.1 * delay)
+        return delay + jitter
+        
+    @monitor_connection
     def connect(self):
         """Establish a Supabase connection."""
         if self.is_dummy:
@@ -83,6 +126,7 @@ class SupabaseClient:
         """Context manager exit."""
         self.disconnect()
         
+    @monitor_operation("insert", "drift_analysis")
     def store_drift_analysis(
         self, 
         model_id: str, 
@@ -105,8 +149,25 @@ class SupabaseClient:
             logger.info(f"[DUMMY] Drift metrics: {json.dumps(drift_metrics, default=str)}")
             return True
             
+        # Use thread-safe operation with retry for transient errors
+        return self._execute_db_operation(
+            operation_name="store_drift_analysis",
+            operation_func=lambda: self._store_drift_analysis_internal(
+                model_id, drift_metrics, baseline_timestamp
+            )
+        )
+            
+    def _store_drift_analysis_internal(
+        self, 
+        model_id: str, 
+        drift_metrics: Dict[str, Dict[str, float]],
+        baseline_timestamp: Optional[datetime] = None
+    ) -> bool:
+        """Internal implementation of store_drift_analysis without retry logic."""
         try:
-            # Create records for each feature
+            # Prepare batch of records for all features
+            batch_records = []
+            
             for feature_name, metrics in drift_metrics.items():
                 # Get required values with defaults
                 drift_score = max(
@@ -134,19 +195,66 @@ class SupabaseClient:
                     "metadata": processed_metrics
                 }
                 
-                # Insert into Supabase
-                result = self.supabase.table('drift_analysis').insert(record).execute()
+                # Add record to batch
+                batch_records.append(record)
+            
+            # Use batch insert instead of individual inserts
+            if batch_records:
+                result = self.supabase.table('drift_analysis').insert(batch_records).execute()
                 
                 # Check if insertion was successful
-                if len(result.data) == 0:
-                    logger.warning(f"Failed to insert drift analysis for feature {feature_name}")
-                    
-            logger.info(f"Stored drift analysis for model {model_id} with {len(drift_metrics)} features")
-            return True
+                success_count = len(result.data) if hasattr(result, 'data') else 0
+                feature_count = len(drift_metrics)
+                
+                if success_count > 0:
+                    logger.info(f"Batch stored drift analysis for model {model_id}: {success_count}/{feature_count} features")
+                    return success_count == feature_count  # True if all features succeeded
+                else:
+                    logger.warning(f"Failed to batch insert drift analysis for model {model_id}")
+                    raise Exception("Batch insert returned no data")
+            else:
+                logger.warning(f"No records to insert for model {model_id}")
+                return False
                 
         except Exception as e:
-            logger.error(f"Failed to store drift analysis: {e}")
-            return False
+            logger.error(f"Failed to batch insert drift analysis: {e}")
+            raise  # Re-raise to be caught by retry mechanism
+            
+    def _execute_with_retry(self, operation_func):
+        """
+        Execute a database operation with retry logic for transient errors.
+        
+        Args:
+            operation_func: A function that performs the database operation
+            
+        Returns:
+            The result of the operation
+            
+        Raises:
+            Exception: If all retries fail
+        """
+        transient_errors = (RequestException, ssl.SSLError, httpx.HTTPError, 
+                           httpx.TimeoutException, ConnectionError)
+        retry_count = 0
+        last_error = None
+        
+        while retry_count <= self.max_retries:
+            try:
+                return operation_func()
+            except transient_errors as e:
+                retry_count += 1
+                last_error = e
+                
+                if retry_count <= self.max_retries:
+                    delay = self._get_retry_delay(retry_count)
+                    logger.debug(f"Transient error in database operation: {e}. Retrying in {delay:.2f}s (attempt {retry_count}/{self.max_retries})")
+                    time.sleep(delay)
+                else:
+                    logger.error(f"Operation failed after {self.max_retries} retries: {e}")
+                    raise
+            except Exception as e:
+                # Non-transient errors are not retried
+                raise
             
     def _process_timestamps(self, data: Any) -> Any:
         """
@@ -179,6 +287,7 @@ class SupabaseClient:
         """
         return [str(item) for item in items]
             
+    @monitor_operation("insert", "retraining_events")
     def store_retraining_event(
         self,
         model_id: str,
@@ -205,6 +314,23 @@ class SupabaseClient:
             logger.info(f"[DUMMY] Reason: {reason}, Success: {success}")
             return True
             
+        # Use thread-safe operation with retry for transient errors
+        return self._execute_db_operation(
+            operation_name="store_retraining_event",
+            operation_func=lambda: self._store_retraining_event_internal(
+                model_id, reason, success, metrics_before, metrics_after
+            )
+        )
+            
+    def _store_retraining_event_internal(
+        self,
+        model_id: str,
+        reason: str,
+        success: bool = False,
+        metrics_before: Optional[Dict[str, Any]] = None,
+        metrics_after: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Internal implementation of store_retraining_event without retry logic."""
         try:
             # Prepare the data record
             record = {
@@ -230,8 +356,60 @@ class SupabaseClient:
                 
         except Exception as e:
             logger.error(f"Failed to store retraining event: {e}")
+            raise  # Re-raise to be caught by retry mechanism
+            
+    def _execute_db_operation(self, operation_name: str, operation_func, max_retries: Optional[int] = None) -> Any:
+        """
+        Execute a database operation with thread safety and retry for transient errors.
+        
+        Args:
+            operation_name: Name of the operation for logging
+            operation_func: Function that performs the database operation
+            max_retries: Optional override for max retries
+            
+        Returns:
+            Result of the operation
+        """
+        # Define transient errors that should be retried
+        transient_errors = (RequestException, ssl.SSLError, httpx.HTTPError, 
+                           httpx.TimeoutException, ConnectionError)
+        
+        # Use thread-safe operation with lock
+        with self.lock:
+            retry_count = 0
+            last_exception = None
+            max_retries = max_retries if max_retries is not None else self.max_retries
+            
+            while retry_count <= max_retries:
+                try:
+                    # Execute the operation
+                    return operation_func()
+                    
+                except transient_errors as e:
+                    # Only retry for transient network/connection errors
+                    last_exception = e
+                    retry_count += 1
+                    
+                    if retry_count <= max_retries:
+                        delay = self._get_retry_delay(retry_count)
+                        logger.warning(f"Transient error in {operation_name}: {e}. "
+                                      f"Retrying in {delay:.2f}s (attempt {retry_count}/{max_retries})")
+                        time.sleep(delay)
+                    else:
+                        logger.error(f"Failed {operation_name} after {max_retries} retries: {e}")
+                        return False
+                        
+                except Exception as e:
+                    # Non-transient errors are not retried
+                    logger.error(f"Failed {operation_name}: {e}")
+                    return False
+            
+            # If we got here, all retries failed
+            logger.error(f"All retries for {operation_name} failed. Last error: {last_exception}")
             return False
             
+    @monitor_operation("insert", "business_metrics")
+    @db_operation_with_retry(operation_name="store_business_metric")
     def store_business_metric(
         self,
         metric_name: str,
@@ -282,8 +460,9 @@ class SupabaseClient:
                 
         except Exception as e:
             logger.error(f"Failed to store business metric: {e}")
-            return False
+            raise  # Re-raise to be caught by retry mechanism
             
+    @monitor_operation("insert", "location_metrics")
     def store_location_metrics(
         self,
         location_id: str,
@@ -341,6 +520,7 @@ class SupabaseClient:
             logger.error(f"Failed to store location metrics: {e}")
             return False
             
+    @monitor_operation("insert", "system_health")
     def store_system_health(
         self,
         component: str,
@@ -393,6 +573,7 @@ class SupabaseClient:
             logger.error(f"Failed to store system health: {e}")
             return False
             
+    @monitor_operation("query", "drift_analysis")
     def get_drift_metrics(
         self,
         model_id: Optional[str] = None,
@@ -451,6 +632,7 @@ class SupabaseClient:
             logger.error(f"Failed to retrieve drift metrics: {e}")
             return []
             
+    @monitor_operation("query", "retraining_events")
     def get_retraining_events(
         self,
         model_id: Optional[str] = None,
@@ -503,6 +685,276 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Failed to retrieve retraining events: {e}")
             return []
+
+    @monitor_operation("query", "business_metrics")
+    def get_business_metrics(
+        self,
+        metric_name: Optional[str] = None,
+        category: Optional[str] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve business metrics from Supabase.
+        
+        Args:
+            metric_name: Optional filter by metric name
+            category: Optional filter by category
+            start_time: Optional start time filter
+            end_time: Optional end time filter
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of business metrics
+        """
+        if self.is_dummy:
+            logger.info(f"[DUMMY] Getting business metrics for category {category}")
+            return []
+            
+        try:
+            # Start building the query
+            query = self.supabase.table('business_metrics').select('*')
+            
+            # Apply filters
+            if metric_name:
+                query = query.eq('metric_name', metric_name)
+                
+            if category:
+                query = query.eq('category', category)
+                
+            if start_time:
+                query = query.gte('timestamp', start_time.isoformat())
+                
+            if end_time:
+                query = query.lte('timestamp', end_time.isoformat())
+            
+            # Apply order and limit
+            query = query.order('timestamp', desc=True).limit(limit)
+            
+            # Execute query
+            result = query.execute()
+            
+            # Extract data from result
+            data = result.data if hasattr(result, 'data') else []
+            
+            logger.info(f"Retrieved {len(data)} business metrics records")
+            return data
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve business metrics: {e}")
+            return []
+    
+    @monitor_operation("query", "location_metrics")
+    def get_location_metrics(
+        self,
+        location_id: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve location metrics from Supabase.
+        
+        Args:
+            location_id: Optional filter by location ID
+            start_date: Optional start date filter
+            end_date: Optional end date filter
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of location metrics
+        """
+        if self.is_dummy:
+            logger.info(f"[DUMMY] Getting location metrics for location {location_id}")
+            return []
+            
+        try:
+            # Start building the query
+            query = self.supabase.table('location_metrics').select('*')
+            
+            # Apply filters
+            if location_id:
+                query = query.eq('location_id', location_id)
+                
+            if start_date:
+                query = query.gte('date', start_date.date().isoformat())
+                
+            if end_date:
+                query = query.lte('date', end_date.date().isoformat())
+            
+            # Apply order and limit
+            query = query.order('date', desc=True).limit(limit)
+            
+            # Execute query
+            result = query.execute()
+            
+            # Extract data from result
+            data = result.data if hasattr(result, 'data') else []
+            
+            logger.info(f"Retrieved {len(data)} location metrics records")
+            return data
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve location metrics: {e}")
+            return []
+    
+    @monitor_operation("query", "system_health")
+    def get_system_health(
+        self,
+        component: Optional[str] = None,
+        status: Optional[str] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
+        limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve system health records from Supabase.
+        
+        Args:
+            component: Optional filter by component name
+            status: Optional filter by status
+            start_time: Optional start time filter
+            end_time: Optional end time filter
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of system health records
+        """
+        if self.is_dummy:
+            logger.info(f"[DUMMY] Getting system health for component {component}")
+            return []
+            
+        try:
+            # Start building the query
+            query = self.supabase.table('system_health').select('*')
+            
+            # Apply filters
+            if component:
+                query = query.eq('component', component)
+                
+            if status:
+                query = query.eq('status', status)
+                
+            if start_time:
+                query = query.gte('timestamp', start_time.isoformat())
+                
+            if end_time:
+                query = query.lte('timestamp', end_time.isoformat())
+            
+            # Apply order and limit
+            query = query.order('timestamp', desc=True).limit(limit)
+            
+            # Execute query
+            result = query.execute()
+            
+            # Extract data from result
+            data = result.data if hasattr(result, 'data') else []
+            
+            logger.info(f"Retrieved {len(data)} system health records")
+            return data
+                
+        except Exception as e:
+            logger.error(f"Failed to retrieve system health records: {e}")
+            return []
+    
+    @monitor_operation("update", "drift_analysis")
+    def update_drift_analysis(
+        self,
+        record_id: str,
+        updates: Dict[str, Any]
+    ) -> bool:
+        """
+        Update a drift analysis record in Supabase.
+        
+        Args:
+            record_id: The ID of the record to update
+            updates: Dictionary of fields to update
+            
+        Returns:
+            bool: Success status
+        """
+        if self.is_dummy:
+            logger.info(f"[DUMMY] Updating drift analysis record {record_id}")
+            return True
+            
+        try:
+            # Prepare the update
+            result = self.supabase.table('drift_analysis').update(updates).eq('id', record_id).execute()
+            
+            # Check if update was successful
+            if len(result.data) == 0:
+                logger.warning(f"Failed to update drift analysis record {record_id}")
+                return False
+                
+            logger.info(f"Updated drift analysis record {record_id}")
+            return True
+                
+        except Exception as e:
+            logger.error(f"Failed to update drift analysis record: {e}")
+            return False
+    
+    @monitor_operation("delete", "drift_analysis")
+    def delete_drift_analysis(
+        self,
+        record_id: str
+    ) -> bool:
+        """
+        Delete a drift analysis record from Supabase.
+        
+        Args:
+            record_id: The ID of the record to delete
+            
+        Returns:
+            bool: Success status
+        """
+        if self.is_dummy:
+            logger.info(f"[DUMMY] Deleting drift analysis record {record_id}")
+            return True
+            
+        try:
+            # Execute delete
+            result = self.supabase.table('drift_analysis').delete().eq('id', record_id).execute()
+            
+            # Check if delete was successful
+            if len(result.data) == 0:
+                logger.warning(f"Failed to delete drift analysis record {record_id}")
+                return False
+                
+            logger.info(f"Deleted drift analysis record {record_id}")
+            return True
+                
+        except Exception as e:
+            logger.error(f"Failed to delete drift analysis record: {e}")
+            return False
+
+    def db_operation_with_retry(operation_name=None):
+        """
+        Decorator for database operations to provide thread safety and retry logic.
+        
+        Args:
+            operation_name: Optional name for the operation (defaults to function name)
+            
+        Returns:
+            Decorator function
+        """
+        def decorator(func):
+            @wraps(func)
+            def wrapper(self, *args, **kwargs):
+                # If in dummy mode, just call the function directly
+                if self.is_dummy:
+                    return func(self, *args, **kwargs)
+                
+                # Get operation name for logging
+                op_name = operation_name or func.__name__
+                
+                # Use the generic execution method
+                return self._execute_db_operation(
+                    operation_name=op_name,
+                    operation_func=lambda: func(self, *args, **kwargs)
+                )
+            return wrapper
+        return decorator
 
 
 # Example usage
