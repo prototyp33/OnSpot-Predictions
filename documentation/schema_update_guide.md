@@ -12,6 +12,31 @@ We've reorganized the database tables from the default `public` schema into logi
 4. `experimentation` - A/B testing tables
 5. `auth` - User management tables
 
+## Migration Approach
+
+Our migration script takes a dual approach:
+
+1. For existing tables in the `public` schema: The script migrates them to their new schema with all data and structure preserved.
+2. For tables that don't exist yet: The script creates them from scratch in their target schema with appropriate column definitions.
+
+This approach ensures that all required tables are available in their designated schemas, whether they existed previously or not.
+
+## Security Enhancements
+
+The migration includes important security improvements:
+
+1. **Row Level Security (RLS)**: All tables now have RLS enabled with policies that restrict access based on user role
+2. **Foreign Key Indexes**: All foreign key columns have indexes to improve query performance
+3. **Performance Indexes**: Common query patterns have additional indexes for better performance
+
+### Row Level Security Policies
+
+Each table has specific policies that define who can access the data:
+
+- Most tables allow authenticated users to read and insert data
+- Some tables allow authenticated users to update existing records
+- User tables have stricter policies that only allow users to access their own data
+
 ## Backward Compatibility
 
 For backward compatibility, we've created views in the `public` schema that point to the new tables. This means that **existing code will continue to work** without modification, but we recommend updating your code to explicitly use the new schemas for better clarity and to avoid potential issues in the future.
@@ -137,12 +162,45 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA core TO authenticated;
 
 If you encounter foreign key constraint issues, check that all foreign key references have been updated to point to tables in their new schemas.
 
+### 4. Row Level Security Errors
+
+If you see errors like:
+```
+ERROR: new row violates row-level security policy
+```
+
+This could mean:
+
+1. The user doesn't have the right role/permissions
+2. The RLS policy is more restrictive than expected
+3. You need to use the service role key for administrative operations
+
+For administrative tasks, use the service role key instead of the anon key.
+
+## Working with Row Level Security
+
+When working with RLS-enabled tables:
+
+1. **Regular users** can only perform operations allowed by policies
+2. **Service role** bypasses RLS for administrative tasks
+3. **Switch between keys** in your code based on the operation:
+
+```python
+# For user operations (respects RLS)
+user_client = create_client(url, anon_key)
+
+# For admin operations (bypasses RLS)
+admin_client = create_client(url, service_key)
+```
+
 ## Best Practices Going Forward
 
 1. **Always use schema prefixes** when referencing tables in SQL queries
 2. **Use the `from_()` method** in Supabase queries instead of `table()`
 3. **Document schema information** in new code and comments
 4. **Verify schema existence** when setting up new development environments
+5. **Remember RLS policies** when designing new features and queries
+6. **Consider indexing needs** when adding new query patterns
 
 ## Questions or Issues?
 
