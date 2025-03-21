@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 """
-Supabase Metrics Extension
+Supabase Metrics Extension Module
 
-This module extends the existing performance monitoring system with
-Supabase-specific metrics tracking capabilities.
+This module integrates Supabase monitoring with external metrics systems
+and provides additional analysis capabilities.
 """
 
 import os
-import sys
 import json
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple, Union
 import time
+from typing import Dict, Any, List, Optional, Tuple
+from datetime import datetime, timedelta
+import threading
 
 # Configure logging
 logging.basicConfig(
@@ -21,528 +21,280 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add parent directory to path to allow imports
-sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
-
-# Try to import needed components
 try:
-    from scripts.monitoring import PerformanceMonitor
-    from scripts.supabase_monitor import get_monitor, SupabaseMonitor
-    from scripts.metrics import BaseMetric, Metric
-except ImportError as e:
-    logger.error(f"Failed to import required modules: {e}")
-    raise
+    from scripts.supabase_monitor import get_monitor
+except ImportError:
+    logger.warning("Failed to import supabase_monitor. Some functions may not work.")
+    def get_monitor():
+        return None
 
-# Default thresholds for Supabase monitoring - fallback if config file is not available
-DEFAULT_SUPABASE_THRESHOLDS = {
-    "latency_threshold_ms": 500,
-    "p95_latency_threshold_ms": 1000,
-    "p99_latency_threshold_ms": 2000,
-    "operation_failure_rate": 0.05,
-    "connection_failure_rate": 0.10,
-    "max_error_count": 100,
-    "alert_window_minutes": 15
+# Default configuration
+DEFAULT_CONFIG = {
+    "health_check_interval": 600,  # 10 minutes
+    "alert_thresholds": {
+        "error_rate": 0.05,  # 5% error rate
+        "p95_latency": 500,  # 500ms p95 latency
+        "connection_failures": 3  # 3 connection failures in interval
+    },
+    "retention_period_days": 7,
+    "supabase_url": os.environ.get("SUPABASE_URL", ""),
+    "supabase_key": os.environ.get("SUPABASE_KEY", ""),
 }
 
+# Global extension instance
+_EXTENSION_INSTANCE = None
 
-def load_config(config_path: str = None) -> Dict[str, Any]:
+
+def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """
-    Load configuration from the specified JSON file.
+    Load configuration from a file or use defaults.
     
     Args:
-        config_path: Path to the config file
+        config_path: Path to JSON configuration file
         
     Returns:
-        Dictionary containing configuration values
+        Configuration dictionary
     """
-    if config_path is None:
-        # Use default path if none provided
-        config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            'config',
-            'retraining_config.json'
-        )
+    config = DEFAULT_CONFIG.copy()
     
-    try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        logger.info(f"Loaded configuration from {config_path}")
-        return config
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logger.warning(f"Failed to load config from {config_path}: {e}. Using default values.")
-        return {"supabase_thresholds": DEFAULT_SUPABASE_THRESHOLDS}
+    if config_path and os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                loaded_config = json.load(f)
+                config.update(loaded_config)
+            logger.info(f"Loaded configuration from {config_path}")
+        except Exception as e:
+            logger.error(f"Error loading configuration from {config_path}: {e}")
+    
+    return config
 
 
-class SupabasePerformanceMonitorExtension:
+class SupabaseMetricsExtension:
     """
-    Extension to integrate Supabase metrics into the existing performance monitoring system.
+    Extension for Supabase monitoring with additional metrics and analysis.
     """
     
-    def __init__(self, performance_monitor: PerformanceMonitor, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str] = None):
         """
-        Initialize the Supabase performance monitor extension.
+        Initialize the metrics extension.
         
         Args:
-            performance_monitor: The existing performance monitor to extend
-            config_path: Optional path to config file
+            config_path: Path to configuration file
         """
-        self.performance_monitor = performance_monitor
-        self.supabase_monitor = get_monitor()
+        self.config = load_config(config_path)
+        self.monitor = get_monitor()
         
-        # Load configuration from file
-        self.full_config = load_config(config_path)
+        self.health_data = []
+        self.alerts = []
+        self.last_health_check = 0
         
-        # Get Supabase thresholds from config
-        config_thresholds = self.full_config.get('supabase_thresholds', {})
+        # Start health check thread
+        self.running = True
+        self.health_check_thread = threading.Thread(target=self._health_check_loop)
+        self.health_check_thread.daemon = True
+        self.health_check_thread.start()
         
-        # Load configuration or use defaults
-        self.config = self.performance_monitor.config.get('supabase_thresholds', {})
-        
-        # Update with values from config file, falling back to defaults for missing values
-        for key, default_value in DEFAULT_SUPABASE_THRESHOLDS.items():
-            if key not in self.config:
-                # Use config file value or default if not in config file
-                self.config[key] = config_thresholds.get(key, default_value)
-        
-        # Initialize cache for health metrics
-        self.health_cache = None
-        self.last_cache_time = None
-        self.cache_ttl_seconds = config_thresholds.get('cache_ttl_seconds', 60)  # Default 60 seconds TTL
-        
-        # Register Supabase metrics with the performance monitor
-        self._register_supabase_metrics()
-        
-        # Store reference to this extension in the performance monitor
-        if not hasattr(self.performance_monitor, 'supabase_extension'):
-            self.performance_monitor.supabase_extension = self
-        
-        logger.info("Supabase performance monitoring extension initialized")
+        logger.info("Supabase metrics extension initialized")
     
-    def _register_supabase_metrics(self) -> None:
-        """Register Supabase-specific metrics with the performance monitor."""
-        # Connection metrics
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_connection_success_rate",
-                description="Success rate of Supabase database connections",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['connection']['success_rate'],
-                threshold=1.0 - self.config['connection_failure_rate'],
-                comparison=">=",
-                alert_level="critical"
-            )
-        )
+    def stop(self):
+        """Stop the background health check thread."""
+        self.running = False
+        if self.health_check_thread.is_alive():
+            self.health_check_thread.join(timeout=2.0)
+    
+    def _health_check_loop(self):
+        """Background thread for periodic health checks."""
+        while self.running:
+            try:
+                interval = self.config["health_check_interval"]
+                now = time.time()
+                
+                # Check if it's time for a health check
+                if now - self.last_health_check >= interval:
+                    self.check_health()
+                    self.last_health_check = now
+                
+                # Sleep for a bit to avoid spinning
+                time.sleep(min(interval / 10, 60))
+            except Exception as e:
+                logger.error(f"Error in health check loop: {e}")
+                time.sleep(60)  # Sleep longer on error
+    
+    def check_health(self) -> Dict[str, Any]:
+        """
+        Check Supabase health and generate alerts if needed.
         
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_connection_latency",
-                description="Average latency of Supabase database connections (ms)",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['connection']['avg_latency_ms'],
-                threshold=self.config['latency_threshold_ms'],
-                comparison="<=",
-                alert_level="warning"
-            )
-        )
+        Returns:
+            Health status dictionary
+        """
+        if not self.monitor:
+            return {"status": "unknown", "alert_level": "unknown", "issues": ["Monitor not available"]}
         
-        # Operation metrics
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_operation_success_rate",
-                description="Success rate of Supabase database operations",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['operations']['success_rate'],
-                threshold=1.0 - self.config['operation_failure_rate'],
-                comparison=">=",
-                alert_level="critical"
-            )
-        )
-        
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_avg_latency",
-                description="Average latency of Supabase operations (ms)",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['performance']['latency_avg_ms'],
-                threshold=self.config['latency_threshold_ms'],
-                comparison="<=",
-                alert_level="warning"
-            )
-        )
-        
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_p95_latency",
-                description="95th percentile latency of Supabase operations (ms)",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['performance']['latency_p95_ms'],
-                threshold=self.config['p95_latency_threshold_ms'],
-                comparison="<=",
-                alert_level="warning"
-            )
-        )
-        
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_p99_latency",
-                description="99th percentile latency of Supabase operations (ms)",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['performance']['latency_p99_ms'],
-                threshold=self.config['p99_latency_threshold_ms'],
-                comparison="<=",
-                alert_level="critical"
-            )
-        )
-        
-        self.performance_monitor.register_metric(
-            BaseMetric(
-                name="supabase_error_rate",
-                description="Error rate of Supabase operations",
-                component="database",
-                source="supabase",
-                get_value=lambda: self.supabase_monitor.get_health_metrics()['performance']['error_rate'],
-                threshold=self.config['operation_failure_rate'],
-                comparison="<=",
-                alert_level="critical"
-            )
-        )
-        
-        # Table-specific metrics
-        for table in ["drift_analysis", "retraining_events", "business_metrics", "location_metrics", "system_health"]:
-            self.performance_monitor.register_metric(
-                BaseMetric(
-                    name=f"supabase_{table}_latency",
-                    description=f"Average latency for {table} table operations (ms)",
-                    component="database",
-                    source="supabase",
-                    get_value=lambda t=table: self._get_table_latency(t),
-                    threshold=self.config['latency_threshold_ms'],
-                    comparison="<=",
-                    alert_level="warning"
-                )
-            )
+        try:
+            metrics = self.monitor.get_metrics()
             
-            self.performance_monitor.register_metric(
-                BaseMetric(
-                    name=f"supabase_{table}_error_rate",
-                    description=f"Error rate for {table} table operations",
-                    component="database",
-                    source="supabase",
-                    get_value=lambda t=table: self._get_table_error_rate(t),
-                    threshold=self.config['operation_failure_rate'],
-                    comparison="<=",
-                    alert_level="warning"
-                )
-            )
+            # Calculate error rate
+            error_rate = metrics["error_count"] / max(metrics["query_count"], 1)
+            
+            issues = []
+            alert_level = "normal"
+            
+            # Check error rate
+            if error_rate > self.config["alert_thresholds"]["error_rate"]:
+                issues.append(f"Error rate ({error_rate:.2%}) exceeds threshold ({self.config['alert_thresholds']['error_rate']:.2%})")
+                alert_level = "warning"
+            
+            # Check latency
+            p95_latency = metrics["performance"]["p95_query_time"]
+            if p95_latency > self.config["alert_thresholds"]["p95_latency"] / 1000:  # Convert ms to seconds
+                issues.append(f"P95 latency ({p95_latency*1000:.2f}ms) exceeds threshold ({self.config['alert_thresholds']['p95_latency']}ms)")
+                alert_level = "warning"
+            
+            # Determine overall status
+            status = "healthy" if not issues else "degraded" if alert_level == "warning" else "critical"
+            
+            # Create health report
+            health = {
+                "timestamp": time.time(),
+                "status": status,
+                "alert_level": alert_level,
+                "metrics": {
+                    "query_count": metrics["query_count"],
+                    "error_count": metrics["error_count"],
+                    "error_rate": error_rate,
+                    "p95_latency_ms": p95_latency * 1000,
+                    "operation_counts": metrics["operation_counts"]
+                },
+                "issues": issues
+            }
+            
+            # Store health data
+            self.health_data.append(health)
+            
+            # Trim health data
+            retention_seconds = self.config["retention_period_days"] * 86400
+            cutoff = time.time() - retention_seconds
+            self.health_data = [h for h in self.health_data if h["timestamp"] > cutoff]
+            
+            # Generate alerts if needed
+            if issues and status != "healthy":
+                alert = {
+                    "timestamp": time.time(),
+                    "level": alert_level,
+                    "issues": issues,
+                    "metrics": health["metrics"]
+                }
+                self.alerts.append(alert)
+                logger.warning(f"Supabase health alert: {issues}")
+            
+            logger.info(f"Supabase health check: {status} (alert level: {alert_level})")
+            return health
+        
+        except Exception as e:
+            logger.error(f"Error checking Supabase health: {e}")
+            health = {
+                "timestamp": time.time(),
+                "status": "unknown",
+                "alert_level": "warning",
+                "issues": [f"Error checking health: {str(e)}"],
+                "metrics": {}
+            }
+            self.health_data.append(health)
+            return health
     
-    def _get_table_latency(self, table_name: str) -> float:
+    def get_health_summary(self, days: int = 1) -> Dict[str, Any]:
         """
-        Get average latency for a specific table.
+        Get a summary of health data for the specified time period.
         
         Args:
-            table_name: Name of the table
+            days: Number of days to include in the summary
             
         Returns:
-            Average latency in milliseconds
+            Summary of health data
         """
-        metrics = self.supabase_monitor.get_health_metrics()
-        table_metrics = metrics.get('tables', {}).get(table_name, {})
+        cutoff = time.time() - (days * 86400)
+        relevant_data = [h for h in self.health_data if h["timestamp"] > cutoff]
         
-        return table_metrics.get('avg_latency_ms', 0)
+        if not relevant_data:
+            return {"status": "unknown", "data_points": 0, "availability": 0}
+        
+        healthy_count = sum(1 for h in relevant_data if h["status"] == "healthy")
+        degraded_count = sum(1 for h in relevant_data if h["status"] == "degraded")
+        critical_count = sum(1 for h in relevant_data if h["status"] == "critical")
+        
+        total_count = len(relevant_data)
+        availability = (healthy_count + degraded_count) / total_count if total_count > 0 else 0
+        
+        return {
+            "status": "healthy" if healthy_count > degraded_count + critical_count else "degraded",
+            "data_points": total_count,
+            "availability": availability,
+            "healthy_percentage": healthy_count / total_count if total_count > 0 else 0,
+            "degraded_percentage": degraded_count / total_count if total_count > 0 else 0,
+            "critical_percentage": critical_count / total_count if total_count > 0 else 0,
+            "first_timestamp": relevant_data[0]["timestamp"] if relevant_data else None,
+            "last_timestamp": relevant_data[-1]["timestamp"] if relevant_data else None
+        }
     
-    def _get_table_error_rate(self, table_name: str) -> float:
+    def get_recent_alerts(self, count: int = 10) -> List[Dict[str, Any]]:
         """
-        Get error rate for a specific table.
+        Get the most recent alerts.
         
         Args:
-            table_name: Name of the table
+            count: Maximum number of alerts to return
             
         Returns:
-            Error rate as a fraction (0-1)
+            List of recent alerts
         """
-        metrics = self.supabase_monitor.get_health_metrics()
-        table_metrics = metrics.get('tables', {}).get(table_name, {})
-        
-        return table_metrics.get('error_rate', 0)
+        return sorted(self.alerts, key=lambda a: a["timestamp"], reverse=True)[:count]
     
     def get_latest_supabase_health(self) -> Dict[str, Any]:
         """
-        Get the latest Supabase health status.
+        Get the latest health status.
         
         Returns:
-            Dictionary with health status information
+            Latest health status
         """
-        # Check if we have a valid cached result
-        current_time = time.time()
-        if (self.health_cache is not None and self.last_cache_time is not None and 
-            current_time - self.last_cache_time < self.cache_ttl_seconds):
-            logger.debug(f"Using cached Supabase health metrics (age: {current_time - self.last_cache_time:.1f}s)")
-            return self.health_cache
+        if not self.health_data:
+            return self.check_health()
         
-        # Cache miss or expired, get fresh metrics
-        logger.debug("Cache miss/expired, fetching fresh Supabase health metrics")
-        
-        # Get metrics from the monitor
-        metrics = self.supabase_monitor.get_health_metrics()
-        
-        # Check threshold violations
-        issues = []
-        alert_level = "info"
-        
-        # Check connection success rate
-        conn_success_rate = metrics['connection']['success_rate']
-        if conn_success_rate < (1.0 - self.config['connection_failure_rate']):
-            issues.append(f"Connection success rate ({conn_success_rate:.2%}) below threshold "
-                          f"({(1.0 - self.config['connection_failure_rate']):.2%})")
-            alert_level = "critical"
-        
-        # Check operation success rate
-        op_success_rate = metrics['operations']['success_rate']
-        if op_success_rate < (1.0 - self.config['operation_failure_rate']):
-            issues.append(f"Operation success rate ({op_success_rate:.2%}) below threshold "
-                          f"({(1.0 - self.config['operation_failure_rate']):.2%})")
-            alert_level = max(alert_level, "critical")
-        
-        # Check latencies
-        avg_latency = metrics['performance']['latency_avg_ms']
-        if avg_latency > self.config['latency_threshold_ms']:
-            issues.append(f"Average latency ({avg_latency:.2f}ms) above threshold "
-                          f"({self.config['latency_threshold_ms']}ms)")
-            alert_level = max(alert_level, "warning")
-        
-        p95_latency = metrics['performance']['latency_p95_ms']
-        if p95_latency > self.config['p95_latency_threshold_ms']:
-            issues.append(f"P95 latency ({p95_latency:.2f}ms) above threshold "
-                          f"({self.config['p95_latency_threshold_ms']}ms)")
-            alert_level = max(alert_level, "warning")
-        
-        p99_latency = metrics['performance']['latency_p99_ms']
-        if p99_latency > self.config['p99_latency_threshold_ms']:
-            issues.append(f"P99 latency ({p99_latency:.2f}ms) above threshold "
-                          f"({self.config['p99_latency_threshold_ms']}ms)")
-            alert_level = max(alert_level, "critical")
-        
-        # Determine overall status
-        status = "healthy"
-        if alert_level == "warning":
-            status = "degraded"
-        elif alert_level == "critical":
-            status = "unhealthy"
-        
-        # Create the health status result
-        health_status = {
-            "status": status,
-            "alert_level": alert_level,
-            "issues": issues,
-            "metrics": metrics,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        # Update the cache
-        self.health_cache = health_status
-        self.last_cache_time = current_time
-        
-        return health_status
-    
-    def invalidate_health_cache(self) -> None:
-        """
-        Invalidate the health metrics cache, forcing a fresh fetch on next request.
-        """
-        self.health_cache = None
-        self.last_cache_time = None
-        logger.debug("Supabase health metrics cache invalidated")
-    
-    def set_cache_ttl(self, ttl_seconds: int) -> None:
-        """
-        Set the time-to-live for the cache in seconds.
-        
-        Args:
-            ttl_seconds: Cache TTL in seconds
-        """
-        if ttl_seconds < 0:
-            raise ValueError("Cache TTL cannot be negative")
-            
-        self.cache_ttl_seconds = ttl_seconds
-        logger.debug(f"Supabase health metrics cache TTL set to {ttl_seconds} seconds")
-        
-        # Invalidate current cache
-        self.invalidate_health_cache()
-        
-    def generate_supabase_performance_report(self) -> str:
-        """
-        Generate a comprehensive report on Supabase performance.
-        
-        Returns:
-            Formatted report string
-        """
-        # Use cached health status if available
-        health = self.get_latest_supabase_health()
-        metrics = health['metrics']
-        
-        # Format the report
-        report = [
-            "SUPABASE PERFORMANCE REPORT",
-            "=========================",
-            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            f"Status: {health['status'].upper()}",
-            f"Alert Level: {health['alert_level'].upper()}",
-            "",
-        ]
-        
-        # Add issues if present
-        if health['issues']:
-            report.append("ISSUES:")
-            for issue in health['issues']:
-                report.append(f"  - {issue}")
-            report.append("")
-        
-        # Connection statistics
-        report.extend([
-            "CONNECTION STATISTICS",
-            "---------------------",
-            f"Success Rate: {metrics['connection']['success_rate']:.2%}",
-            f"Attempts: {metrics['connection']['attempts']}",
-            f"Failures: {metrics['connection']['failures']}",
-            f"Average Latency: {metrics['connection']['avg_latency_ms']:.2f}ms",
-            "",
-        ])
-        
-        # Operation statistics
-        report.extend([
-            "OPERATION STATISTICS",
-            "--------------------",
-            f"Success Rate: {metrics['operations']['success_rate']:.2%}",
-            f"Total Operations: {metrics['operations']['total_count']}",
-            f"Average Latency: {metrics['performance']['latency_avg_ms']:.2f}ms",
-            f"P95 Latency: {metrics['performance']['latency_p95_ms']:.2f}ms",
-            f"P99 Latency: {metrics['performance']['latency_p99_ms']:.2f}ms",
-            f"Error Rate: {metrics['performance']['error_rate']:.2%}",
-            "",
-        ])
-        
-        # Operation distribution
-        if metrics['operations']['operation_counts']:
-            report.append("OPERATION DISTRIBUTION")
-            report.append("---------------------")
-            sorted_ops = sorted(
-                metrics['operations']['operation_counts'].items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
-            for op, count in sorted_ops:
-                report.append(f"  {op}: {count}")
-            report.append("")
-        
-        # Error distribution
-        if metrics['operations']['error_counts']:
-            report.append("ERROR DISTRIBUTION")
-            report.append("-----------------")
-            sorted_errors = sorted(
-                metrics['operations']['error_counts'].items(),
-                key=lambda x: x[1],
-                reverse=True
-            )
-            for error, count in sorted_errors:
-                report.append(f"  {error}: {count}")
-            report.append("")
-        
-        # Table performance
-        if 'tables' in metrics and metrics['tables']:
-            report.append("TABLE PERFORMANCE")
-            report.append("----------------")
-            for table, table_metrics in metrics['tables'].items():
-                report.append(f"  {table.upper()}:")
-                report.append(f"    Operations: {table_metrics.get('operations', 0)}")
-                report.append(f"    Average Latency: {table_metrics.get('avg_latency_ms', 0):.2f}ms")
-                report.append(f"    Error Rate: {table_metrics.get('error_rate', 0):.2%}")
-            report.append("")
-        
-        # Recent errors
-        if 'recent_errors' in metrics and metrics['recent_errors']:
-            report.append("RECENT ERRORS (LAST 15 MINUTES)")
-            report.append("------------------------------")
-            for i, error in enumerate(metrics['recent_errors'][:10], 1):
-                report.append(f"  {i}. [{error.get('timestamp', 'Unknown')}] {error.get('error', 'Unknown error')}")
-                report.append(f"     Operation: {error.get('operation', 'Unknown')} - Table: {error.get('table', 'Unknown')}")
-            
-            if len(metrics['recent_errors']) > 10:
-                report.append(f"  ... and {len(metrics['recent_errors']) - 10} more errors")
-            report.append("")
-        
-        # Add recommendations
-        report.extend([
-            "RECOMMENDATIONS",
-            "--------------",
-        ])
-        
-        if health['status'] == "healthy":
-            report.append("  - System is operating normally. Continue monitoring.")
-        else:
-            # Add specific recommendations based on issues
-            if any("Connection success rate" in issue for issue in health['issues']):
-                report.append("  - Check database connectivity and network issues")
-                report.append("  - Verify that database credentials are correct")
-            
-            if any("Operation success rate" in issue for issue in health['issues']):
-                report.append("  - Review recent errors to identify patterns")
-                report.append("  - Check for schema validation issues or constraint violations")
-            
-            if any("latency" in issue.lower() for issue in health['issues']):
-                report.append("  - Consider optimizing database queries")
-                report.append("  - Check for slow-running operations and review their implementation")
-                report.append("  - Monitor database load and consider scaling if necessary")
-        
-        return "\n".join(report)
+        return self.health_data[-1]
 
 
-def integrate_supabase_monitoring(config_path: Optional[str] = None) -> Union[SupabasePerformanceMonitorExtension, None]:
+def integrate_supabase_monitoring(config_path: Optional[str] = None) -> SupabaseMetricsExtension:
     """
-    Integrate Supabase monitoring with the existing performance monitoring system.
-    
-    This function creates and returns a SupabasePerformanceMonitorExtension instance
-    if the required components are available. Otherwise, it returns None.
+    Integrate Supabase monitoring with the application.
     
     Args:
-        config_path: Optional path to configuration file
+        config_path: Path to configuration file
         
     Returns:
-        A SupabasePerformanceMonitorExtension instance or None
+        Metrics extension instance
     """
-    try:
-        from scripts.monitoring import PerformanceMonitor
-        
-        # Get or create a PerformanceMonitor instance
-        try:
-            # Try to get the existing PerformanceMonitor instance
-            from scripts.automated_monitoring import MonitoringPipeline
-            performance_monitor = MonitoringPipeline().performance_monitor
-        except (ImportError, AttributeError):
-            # Create a new instance if not available
-            performance_monitor = PerformanceMonitor()
-        
-        # Check if extension already exists
-        if hasattr(performance_monitor, 'supabase_extension'):
-            return performance_monitor.supabase_extension
-        
-        # Create and return the extension with config path
-        return SupabasePerformanceMonitorExtension(performance_monitor, config_path)
+    global _EXTENSION_INSTANCE
     
-    except ImportError as e:
-        logger.error(f"Failed to integrate Supabase monitoring: {e}")
-        return None
+    if _EXTENSION_INSTANCE is None:
+        _EXTENSION_INSTANCE = SupabaseMetricsExtension(config_path)
+    
+    return _EXTENSION_INSTANCE
 
 
 if __name__ == "__main__":
-    # When run directly, integrate monitoring and generate a report
+    # Example usage
     extension = integrate_supabase_monitoring()
-    if extension:
-        report = extension.generate_supabase_performance_report()
-        print(report)
-    else:
-        print("Failed to integrate Supabase monitoring.") 
+    
+    # Perform a health check
+    health = extension.check_health()
+    print(f"Health status: {health['status']}")
+    
+    if health["issues"]:
+        print("Issues:")
+        for issue in health["issues"]:
+            print(f"  - {issue}")
+    
+    # Get health summary
+    summary = extension.get_health_summary()
+    print(f"\nHealth summary (last 24 hours):")
+    print(f"  Status: {summary['status']}")
+    print(f"  Availability: {summary['availability']:.2%}")
+    print(f"  Data points: {summary['data_points']}") 
