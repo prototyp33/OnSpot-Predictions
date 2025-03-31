@@ -17,6 +17,8 @@ import json
 from typing import Dict, List, Optional, Tuple
 import yaml
 from tqdm import tqdm
+import multiprocessing as mp
+from functools import partial
 
 from validation import (
     ValidationConfig,
@@ -60,12 +62,13 @@ def setup_logging(config: ValidationConfig) -> None:
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
-def load_data_splits(config: ValidationConfig) -> Dict[str, pd.DataFrame]:
+def load_data_splits(config: ValidationConfig, columns: Optional[List[str]] = None) -> Dict[str, pd.DataFrame]:
     """
     Load all dataset splits based on configuration.
     
     Args:
         config: Validation configuration object
+        columns: Optional list of columns to load (memory optimization)
         
     Returns:
         Dictionary mapping split names to DataFrames
@@ -79,7 +82,8 @@ def load_data_splits(config: ValidationConfig) -> Dict[str, pd.DataFrame]:
     for split in expected_splits:
         split_path = splits_dir / f'{split}.csv'
         try:
-            df = pd.read_csv(split_path)
+            # Load only required columns if specified
+            df = pd.read_csv(split_path, usecols=columns) if columns else pd.read_csv(split_path)
             logger.info(f"Loaded {split} data: {df.shape}")
             data_splits[split] = df
         except Exception as e:
@@ -101,11 +105,25 @@ def load_data_splits(config: ValidationConfig) -> Dict[str, pd.DataFrame]:
     
     return data_splits
 
+def analyze_feature_parallel(feature: str, data_splits: Dict[str, pd.DataFrame], analyzer: DistributionAnalyzer) -> Tuple[str, dict]:
+    """Analyze a single feature in parallel."""
+    try:
+        distributions = {
+            name: split[feature] for name, split in data_splits.items()
+        }
+        result = analyzer.analyze_feature(distributions, feature)
+        return feature, result
+    except Exception as e:
+        logger.error(f"Error analyzing feature {feature}: {str(e)}")
+        return feature, None
+
 def validate_features(
     config_path: str,
     output_format: str = 'html',
     generate_feature_reports: bool = True,
-    feature_subset: Optional[List[str]] = None
+    feature_subset: Optional[List[str]] = None,
+    n_jobs: int = -1,
+    skip_visualizations: bool = False
 ) -> None:
     """
     Run the complete feature validation pipeline.
@@ -115,55 +133,52 @@ def validate_features(
         output_format: Format for reports ('html' or 'markdown')
         generate_feature_reports: Whether to generate individual feature reports
         feature_subset: Optional list of features to analyze (if None, analyzes all)
+        n_jobs: Number of parallel jobs (-1 for all CPUs)
+        skip_visualizations: Whether to skip generating visualizations during analysis
     """
     try:
         # 1. Initialize configuration
         logger.info(f"Initializing validation with config from: {config_path}")
         config = ValidationConfig(config_path)
         
+        if skip_visualizations:
+            # Temporarily disable visualizations in config
+            config.config['analysis']['visualization']['enabled'] = False
+        
         # Set up logging
         setup_logging(config)
         
-        # 2. Load data splits
-        data_splits = load_data_splits(config)
+        # 2. Determine features to analyze
+        if feature_subset is None:
+            # Read CSV header only to get column names
+            reference_path = Path(config.config['data']['splits_dir']) / 'reference.csv'
+            feature_subset = pd.read_csv(reference_path, nrows=0).columns.tolist()
         
-        # 3. Initialize analyzer
+        # 3. Load data splits with only required columns
+        data_splits = load_data_splits(config, columns=feature_subset)
+        
+        # 4. Initialize analyzer
         logger.info("Initializing DistributionAnalyzer...")
         analyzer = DistributionAnalyzer(config)
         
-        # Get features to analyze
-        all_features = data_splits['reference'].columns.tolist()
-        features_to_analyze = (
-            feature_subset if feature_subset is not None
-            else all_features
-        )
-        
-        # Validate feature subset
-        if feature_subset:
-            invalid_features = set(feature_subset) - set(all_features)
-            if invalid_features:
-                raise ValueError(f"Invalid features specified: {invalid_features}")
-        
-        # 4. Run analysis with progress bar
+        # 5. Run parallel analysis
         logger.info("Running batch analysis...")
-        analysis_results = {}
+        n_jobs = mp.cpu_count() if n_jobs == -1 else n_jobs
         
-        for feature in tqdm(features_to_analyze, desc="Analyzing features"):
-            try:
-                # Extract feature distributions
-                distributions = {
-                    name: split[feature] for name, split in data_splits.items()
-                }
-                
-                # Analyze feature
-                result = analyzer.analyze_feature(distributions, feature)
-                analysis_results[feature] = result
-                
-            except Exception as e:
-                logger.error(f"Error analyzing feature {feature}: {str(e)}")
-                continue
+        with mp.Pool(processes=n_jobs) as pool:
+            analyze_func = partial(analyze_feature_parallel, data_splits=data_splits, analyzer=analyzer)
+            results = list(tqdm(
+                pool.imap(analyze_func, feature_subset),
+                total=len(feature_subset),
+                desc="Analyzing features"
+            ))
         
-        # 5. Save raw analysis results
+        # Convert results to dictionary
+        analysis_results = {
+            feature: result for feature, result in results if result is not None
+        }
+        
+        # 6. Save raw analysis results
         results_dir = Path(config.get_output_dir()) / 'results'
         results_dir.mkdir(parents=True, exist_ok=True)
         
@@ -173,11 +188,10 @@ def validate_features(
         logger.info(f"Saving analysis results to: {results_path}")
         analyzer.save_analysis_results(analysis_results, results_path)
         
-        # 6. Initialize report generator
+        # 7. Generate reports
         logger.info("Initializing ReportGenerator...")
         reporter = ReportGenerator(config)
         
-        # 7. Generate and export summary report
         logger.info(f"Generating summary report in {output_format} format...")
         summary_report = reporter.generate_summary_report(
             results=analysis_results,
@@ -197,56 +211,30 @@ def validate_features(
             report_type='summary'
         )
         
-        # 8. Optionally generate individual feature reports
         if generate_feature_reports:
             logger.info("Generating individual feature reports...")
-            feature_reports_dir = Path(config.get_output_dir()) / 'reports' / 'features'
-            feature_reports_dir.mkdir(parents=True, exist_ok=True)
-            
-            for feature_name, result in tqdm(analysis_results.items(), desc="Generating feature reports"):
-                try:
-                    feature_report = reporter.generate_feature_report(
-                        result=result,
-                        output_format=output_format
-                    )
-                    
-                    feature_path = (
-                        feature_reports_dir / 
-                        f'{feature_name}_report_{timestamp}.{output_format}'
-                    )
-                    
-                    reporter.export_report(
-                        report_content=feature_report,
-                        output_path=feature_path,
-                        report_type='feature'
-                    )
-                except Exception as e:
-                    logger.error(f"Error generating report for feature {feature_name}: {str(e)}")
-                    continue
-        
-        # 9. Generate validation summary
-        validation_summary = {
-            'timestamp': timestamp,
-            'config_path': str(config_path),
-            'features_analyzed': len(analysis_results),
-            'features_with_issues': sum(1 for r in analysis_results.values() if r.summary.get('has_issues', False)),
-            'output_files': {
-                'results': str(results_path),
-                'summary_report': str(summary_path),
-                'feature_reports_dir': str(feature_reports_dir) if generate_feature_reports else None
-            }
-        }
-        
-        # Save validation summary
-        summary_path = Path(config.get_output_dir()) / f'validation_summary_{timestamp}.json'
-        with open(summary_path, 'w') as f:
-            json.dump(validation_summary, f, indent=2)
-        
-        logger.info("Feature validation pipeline completed successfully!")
-        logger.info(f"Results saved to: {config.get_output_dir()}")
-        
+            for feature, result in tqdm(analysis_results.items(), desc="Generating feature reports"):
+                report = reporter.generate_feature_report(
+                    feature=feature,
+                    result=result,
+                    output_format=output_format
+                )
+                
+                report_path = (
+                    Path(config.get_output_dir()) / 
+                    'reports' / 
+                    'features' /
+                    f'{feature}_{timestamp}.{output_format}'
+                )
+                
+                reporter.export_report(
+                    report_content=report,
+                    output_path=report_path,
+                    report_type='feature'
+                )
+                
     except Exception as e:
-        logger.error(f"Feature validation pipeline failed: {str(e)}")
+        logger.error(f"Validation failed: {str(e)}")
         raise
 
 def main():
@@ -279,13 +267,28 @@ def main():
         help="Optional list of specific features to analyze"
     )
     
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=-1,
+        help="Number of parallel jobs (-1 for all CPUs)"
+    )
+    
+    parser.add_argument(
+        "--skip-viz",
+        action="store_true",
+        help="Skip generating visualizations during analysis"
+    )
+    
     args = parser.parse_args()
     
     validate_features(
         config_path=args.config_path,
         output_format=args.output_format,
         generate_feature_reports=not args.skip_feature_reports,
-        feature_subset=args.features
+        feature_subset=args.features,
+        n_jobs=args.jobs,
+        skip_visualizations=args.skip_viz
     )
 
 if __name__ == "__main__":
