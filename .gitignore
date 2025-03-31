@@ -51,6 +51,12 @@ models/*.h5
 *.model
 *.joblib
 
+# Frontend and Dashboard (separate repositories)
+onspot-frontend/
+onspot-monitoring/
+frontend/
+onspot-monitoring-dashboard/
+
 # Terraform
 terraform/.terraform/
 *.tfstate
