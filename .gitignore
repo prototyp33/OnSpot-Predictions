@@ -21,24 +21,67 @@ wheels/
 *.egg
 
 # Virtual Environment
-.env
-.venv
-env/
 venv/
 ENV/
+env/
+.env
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-.project
-.pydevproject
-.settings/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+data/splits/*.csv
+data/raw/*.csv
+data/processed/*.csv
+data/interim/*.csv
+models/*.pkl
+models/*.h5
+*.model
+*.joblib
+
+# Terraform
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
 
 # Jupyter Notebook
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
+
+# Large files and directories
+*.csv
+*.parquet
+*.feather
+*.hdf5
+*.h5
+*.pkl
+*.joblib
+*.zip
+*.tar.gz
+*.tgz
 
 # Distribution / packaging
 *.tar.gz
@@ -93,10 +136,6 @@ results/reports/*
 # Documentation build
 site/
 docs/_build/
-
-# OS
-.DS_Store
-Thumbs.db
 
 # C extensions
 *.so
@@ -279,3 +318,4 @@ validation_results.json
 # GitHub Actions related
 act-artifacts/
 act-secrets.env
+terraform/.terraform/
