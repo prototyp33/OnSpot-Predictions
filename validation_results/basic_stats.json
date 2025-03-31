@@ -1,0 +1,715 @@
+{
+    "morning_peak": {
+        "train": {
+            "mean": 0.238109559613319,
+            "std": 0.4259267068597833,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "midday": {
+        "train": {
+            "mean": 0.29763694951664876,
+            "std": 0.4572191847660208,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "evening_peak": {
+        "train": {
+            "mean": 0.238109559613319,
+            "std": 0.4259267068597825,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "night": {
+        "train": {
+            "mean": 0.2261439312567132,
+            "std": 0.4183336111965793,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "business_hours": {
+        "train": {
+            "mean": 0.5357465091299678,
+            "std": 0.4987207732942117,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "workday": {
+        "train": {
+            "mean": -1.0,
+            "std": 0.0,
+            "min": -1.0,
+            "max": -1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": -1.9442105263157894,
+            "std": 0.22951520287074023,
+            "min": -2.0,
+            "max": -1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": -2.0,
+            "std": 0.0,
+            "min": -2.0,
+            "max": -2.0,
+            "missing": 0.0
+        }
+    },
+    "monday": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "friday": {
+        "train": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.05578947368421053,
+            "std": 0.22951520287074026,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "saturday": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.9442105263157895,
+            "std": 0.22951520287074026,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "sunday": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "hour_sin_halfday": {
+        "train": {
+            "mean": -0.2161764293828862,
+            "std": 0.6971537050443318,
+            "min": -1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.46248855951727197,
+            "std": 0.4344816380226607,
+            "min": -0.5000000000000014,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.5461727700435879,
+            "std": 0.38237049334624923,
+            "min": 1.2246467991473532e-16,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "hour_cos_halfday": {
+        "train": {
+            "mean": -0.010362538129064217,
+            "std": 0.6834748963169606,
+            "min": -1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.7054653151269001,
+            "std": 0.3156737753904282,
+            "min": 6.123233995736766e-17,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": -0.6571502136526104,
+            "std": 0.3516288312560465,
+            "min": -1.0,
+            "max": 6.123233995736766e-17,
+            "missing": 0.0
+        }
+    },
+    "hours_since_midnight": {
+        "train": {
+            "mean": 15.357881534192625,
+            "std": 4.8494853795767305,
+            "min": 7.0,
+            "max": 23.75,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 2.8965549289891395,
+            "std": 5.182693836113132,
+            "min": 0.0,
+            "max": 23.916666666666668,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 5.1579594820384305,
+            "std": 1.0393541853082688,
+            "min": 3.3333333333333335,
+            "max": 6.916666666666667,
+            "missing": 0.0
+        }
+    },
+    "days_since_month_start": {
+        "train": {
+            "mean": 30.0,
+            "std": 0.0,
+            "min": 30.0,
+            "max": 30.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 1.6736842105263159,
+            "std": 6.885456086122214,
+            "min": 0.0,
+            "max": 30.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "days_until_month_end": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 25.493684210526315,
+            "std": 6.196910477509991,
+            "min": 0.0,
+            "max": 27.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 27.0,
+            "std": 0.0,
+            "min": 27.0,
+            "max": 27.0,
+            "missing": 0.0
+        }
+    },
+    "location_cluster": {
+        "train": {
+            "mean": 2.0385517364840675,
+            "std": 1.3651437552671326,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 2.0385380116959064,
+            "std": 1.3651564367228912,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 2.0385964912280703,
+            "std": 1.3650874669171777,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        }
+    },
+    "is_holiday": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "days_to_holiday": {
+        "train": {
+            "mean": 68.0,
+            "std": 0.0,
+            "min": 68.0,
+            "max": 68.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 67.07893483709273,
+            "std": 0.26963759433774487,
+            "min": 67.0,
+            "max": 68.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 67.0,
+            "std": 0.0,
+            "min": 67.0,
+            "max": 67.0,
+            "missing": 0.0
+        }
+    },
+    "high_season": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "shoulder_season": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "low_season": {
+        "train": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "school_year": {
+        "train": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 1.0,
+            "std": 0.0,
+            "min": 1.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "school_holiday": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "nearest_metro_distance": {
+        "train": {
+            "mean": 2.0714975658809522,
+            "std": 1.0147780929200363,
+            "min": 0.10473986644847134,
+            "max": 4.771375493260795,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 2.0726165978606717,
+            "std": 1.0149403342835506,
+            "min": 0.10473986644847134,
+            "max": 4.771375493260795,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 2.0713328442654872,
+            "std": 1.0146909636232009,
+            "min": 0.10473986644847134,
+            "max": 4.771375493260795,
+            "missing": 0.0
+        }
+    },
+    "near_metro": {
+        "train": {
+            "mean": 0.04495882563551736,
+            "std": 0.20721382209251835,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.044824561403508774,
+            "std": 0.20691906375082184,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.04491645781119465,
+            "std": 0.20712109700204215,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "city_center": {
+        "train": {
+            "mean": 0.13174006444683137,
+            "std": 0.3382081049465777,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.13156223893066,
+            "std": 0.33801493083895623,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.13184628237259816,
+            "std": 0.3383242798306542,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "beach_proximity": {
+        "train": {
+            "mean": 3.454495954479451,
+            "std": 1.7152767449282083,
+            "min": 0.06741051477538197,
+            "max": 7.368775398222416,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 3.45452833038396,
+            "std": 1.7163211297601846,
+            "min": 0.06741051477538197,
+            "max": 7.368775398222416,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 3.4539282136924436,
+            "std": 1.7152531121042656,
+            "min": 0.06741051477538197,
+            "max": 7.368775398222416,
+            "missing": 0.0
+        }
+    },
+    "near_beach": {
+        "train": {
+            "mean": 0.06309434300035804,
+            "std": 0.24313267940345284,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.06335421888053468,
+            "std": 0.24359948625399572,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.06325814536340853,
+            "std": 0.2434271963662417,
+            "min": 0.0,
+            "max": 1.0,
+            "missing": 0.0
+        }
+    },
+    "location_cluster_morning_peak": {
+        "train": {
+            "mean": 0.48541353383458646,
+            "std": 1.0943821557110152,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "location_cluster_evening_peak": {
+        "train": {
+            "mean": 0.48541353383458646,
+            "std": 1.0943821557110174,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        }
+    },
+    "location_cluster_is_weekend": {
+        "train": {
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "missing": 0.0
+        },
+        "validation": {
+            "mean": 1.924561403508772,
+            "std": 1.406714352896829,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        },
+        "test": {
+            "mean": 2.0385964912280703,
+            "std": 1.3650874669171777,
+            "min": 0.0,
+            "max": 4.0,
+            "missing": 0.0
+        }
+    }
+}

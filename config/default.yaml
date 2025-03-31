@@ -1,0 +1,41 @@
+# Default configuration for OnSpot Predictive Model
+
+app:
+  name: "OnSpot Predictive Model"
+  version: "1.0.0"
+  environment: "development"
+
+data:
+  storage_path: "data/"
+  validation:
+    min_samples: 30
+    correlation_threshold: 0.3
+    confidence_threshold: 0.95
+
+models:
+  storage_path: "models/"
+  versioning:
+    enabled: true
+    storage: "production_models/"
+  retraining:
+    interval_days: 30
+    min_samples: 1000
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["*"]
+  timeout: 30
+
+monitoring:
+  enabled: true
+  drift_detection:
+    interval_hours: 24
+    threshold: 0.1
+  metrics:
+    export_path: "monitoring/metrics/"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/onspot.log" 

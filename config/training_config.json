@@ -1,0 +1,66 @@
+{
+    "data": {
+        "input_path": "data/cleaned_parking_data_with_features.csv",
+        "output_path": "production_models"
+    },
+    "target_column": "occupancy_level",
+    "features": {
+        "numeric_features": ["hour", "day_of_week", "month"],
+        "binary_features": [],
+        "categorical_features": ["id_tramo", "tramo", "tipo", "tarifa", "horario"],
+        "base_features": [
+            "hour",
+            "day_of_week",
+            "month",
+            "tipo",
+            "tarifa"
+        ],
+        "engineered_features": [
+            "morning_peak",
+            "midday",
+            "evening_peak",
+            "night",
+            "business_hours",
+            "workday",
+            "monday",
+            "friday",
+            "saturday",
+            "sunday",
+            "hour_sin_halfday",
+            "hour_cos_halfday",
+            "hours_since_midnight",
+            "days_since_month_start",
+            "days_until_month_end",
+            "location_cluster",
+            "is_holiday",
+            "days_to_holiday",
+            "high_season",
+            "shoulder_season",
+            "low_season",
+            "school_year",
+            "school_holiday"
+        ]
+    },
+    "model_params": {
+        "window_size": 24,
+        "step_size": 1,
+        "min_samples": 50,
+        "max_depth": 20,
+        "min_samples_split": 10,
+        "min_samples_leaf": 4
+    },
+    "validation": {
+        "required_columns": ["id_tramo", "tramo", "tipo", "tarifa", "horario", "lon", "lat", "time_slot", "occupancy_level", "datetime", "hour", "day_of_week", "month"],
+        "numeric_columns": ["lon", "lat", "occupancy_level", "hour", "day_of_week", "month"],
+        "categorical_columns": ["id_tramo", "tramo", "tipo", "tarifa", "horario", "time_slot"],
+        "value_ranges": {
+            "occupancy_level": [0, 100],
+            "lat": [41.3, 41.5],
+            "lon": [2.0, 2.3]
+        },
+        "categorical_values": {
+            "_comment": "VERDA (Green) zones are primarily for residents, BLAVA (Blue) zones are for general public parking",
+            "tipo": ["VERDA", "BLAVA"]
+        }
+    }
+} 

@@ -1,0 +1,73 @@
+# Base Configuration for OnSpot Predictive Model
+
+# Project paths
+paths:
+  data_dir: "data"
+  models_dir: "models"
+  results_dir: "results"
+  logs_dir: "logs"
+
+# Data settings
+data:
+  raw_data:
+    parking_data: "${paths.data_dir}/Estacionaments_Area_DUM.json"
+    osm_data: "${paths.data_dir}/cleaned_OSM-parking_data.csv"
+  
+  processed_data:
+    default: "${paths.data_dir}/prepared_data.csv"
+    improved: "${paths.data_dir}/prepared_data_improved.csv"
+    advanced: "${paths.data_dir}/prepared_data_improved_advanced.csv"
+  
+  feature_engineered:
+    default: "${paths.data_dir}/feature_engineered_data.csv"
+  
+  validation:
+    threshold: 0.05  # Maximum error rate allowed
+
+# Model settings
+model:
+  default_algorithm: "GradientBoostingRegressor"
+  random_state: 42
+  
+  cross_validation:
+    n_splits: 5
+    test_size: 0.2
+  
+  hyperparameter_tuning:
+    n_iter: 50
+    cv: 3
+    n_jobs: -1
+  
+  training:
+    save_checkpoints: true
+    checkpoint_frequency: 10
+  
+  ensemble:
+    use_ensembles: true
+    algorithms: ["xgboost", "lightgbm", "catboost"]
+    stacking: true
+
+# Monitoring settings
+monitoring:
+  frequency_hours: 24
+  drift_threshold: 0.1
+  alert_on_drift: true
+  
+  retraining:
+    auto_retrain: true
+    default_interval_days: 30
+
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  workers: 4
+
+# Logging settings
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "${paths.logs_dir}/onspot.log"
+  rotation: "1 day"
+  retention: "30 days" 

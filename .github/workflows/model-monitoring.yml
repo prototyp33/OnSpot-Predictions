@@ -1,0 +1,147 @@
+name: Model Monitoring
+
+on:
+  schedule:
+    - cron: '0 4 * * *'  # Run daily at 4 AM UTC
+  push:
+    paths:
+      - 'data/monitoring/**'
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Model to monitor (leave empty for all models)'
+        required: false
+        type: string
+      drift_threshold:
+        description: 'Custom drift detection threshold (0.0-1.0)'
+        required: false
+        type: string
+        default: '0.05'
+
+jobs:
+  model_monitoring:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Set monitoring parameters
+      id: params
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.model }}" != "" ]; then
+          echo "MONITOR_MODEL=${{ github.event.inputs.model }}" >> $GITHUB_ENV
+          echo "DRIFT_THRESHOLD=${{ github.event.inputs.drift_threshold }}" >> $GITHUB_ENV
+          echo "Monitoring model: ${{ github.event.inputs.model }} with threshold ${{ github.event.inputs.drift_threshold }}" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "MONITOR_MODEL=all" >> $GITHUB_ENV
+          echo "DRIFT_THRESHOLD=0.05" >> $GITHUB_ENV
+          echo "Monitoring all models with default threshold" >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Run performance monitoring
+      run: |
+        echo "Running performance monitoring for $MONITOR_MODEL"
+        python scripts/model_monitoring.py --model $MONITOR_MODEL --check-performance --output model_performance.json
+    
+    - name: Run data drift detection
+      run: |
+        echo "Running data drift detection for $MONITOR_MODEL"
+        python scripts/model_monitoring.py --model $MONITOR_MODEL --detect-drift --threshold $DRIFT_THRESHOLD --output data_drift.json
+    
+    - name: Generate monitoring report
+      run: |
+        python scripts/generate_monitoring_report.py --performance model_performance.json --drift data_drift.json --output monitoring_report.html
+    
+    - name: Upload monitoring artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: monitoring-results
+        path: |
+          model_performance.json
+          data_drift.json
+          monitoring_report.html
+    
+    - name: Check for performance degradation
+      id: check_performance
+      run: |
+        # Parse performance monitoring results
+        if grep -q "\"degraded\":true" model_performance.json; then
+          echo "PERFORMANCE_DEGRADED=true" >> $GITHUB_ENV
+          echo "::warning::Performance degradation detected"
+        else
+          echo "PERFORMANCE_DEGRADED=false" >> $GITHUB_ENV
+        fi
+    
+    - name: Check for data drift
+      id: check_drift
+      run: |
+        # Parse data drift results
+        if grep -q "\"drift_detected\":true" data_drift.json; then
+          echo "DRIFT_DETECTED=true" >> $GITHUB_ENV
+          echo "::warning::Data drift detected"
+        else
+          echo "DRIFT_DETECTED=false" >> $GITHUB_ENV
+        fi
+    
+    - name: Create issues for detected problems
+      if: env.PERFORMANCE_DEGRADED == 'true' || env.DRIFT_DETECTED == 'true'
+      run: |
+        if [ "$PERFORMANCE_DEGRADED" == "true" ]; then
+          MODEL=$(grep -o "\"model\":\"[^\"]*\"" model_performance.json | head -1 | cut -d'"' -f4)
+          METRIC=$(grep -o "\"metric\":\"[^\"]*\"" model_performance.json | head -1 | cut -d'"' -f4)
+          VALUE=$(grep -o "\"current_value\":[0-9.]*" model_performance.json | head -1 | cut -d':' -f2)
+          BASELINE=$(grep -o "\"baseline_value\":[0-9.]*" model_performance.json | head -1 | cut -d':' -f2)
+          
+          echo "Creating issue for performance degradation"
+          gh issue create \
+            --title "Model Performance Degradation Detected: $MODEL" \
+            --body "## Model Performance Alert
+            
+            Model: $MODEL
+            Metric: $METRIC
+            Current Value: $VALUE
+            Baseline Value: $BASELINE
+            
+            The model performance has degraded beyond the acceptable threshold.
+            
+            ### Next Steps
+            1. Review the full [monitoring report](link-to-artifact)
+            2. Investigate potential causes
+            3. Consider model retraining
+            
+            [Link to monitoring workflow run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+        fi
+        
+        if [ "$DRIFT_DETECTED" == "true" ]; then
+          MODEL=$(grep -o "\"model\":\"[^\"]*\"" data_drift.json | head -1 | cut -d'"' -f4)
+          FEATURES=$(grep -o "\"drifted_features\":\\[.*\\]" data_drift.json | sed 's/\"drifted_features\"://g')
+          
+          echo "Creating issue for data drift"
+          gh issue create \
+            --title "Data Drift Detected: $MODEL" \
+            --body "## Data Drift Alert
+            
+            Model: $MODEL
+            Drifted Features: $FEATURES
+            
+            Data drift has been detected beyond the threshold of $DRIFT_THRESHOLD.
+            
+            ### Next Steps
+            1. Review the full [monitoring report](link-to-artifact)
+            2. Investigate the drifted features
+            3. Consider model retraining with newer data
+            
+            [Link to monitoring workflow run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

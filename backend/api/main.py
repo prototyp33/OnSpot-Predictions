@@ -15,18 +15,31 @@ from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# Add project root to path
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Import from existing modules
-from scripts.parking_sim.advanced_features import engineer_advanced_features
-
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+def engineer_advanced_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Engineer advanced features for the model."""
+    df = df.copy()
+    
+    # Extract time-based features if timestamp is present
+    if "timestamp" in df.columns:
+        df["hour_of_day"] = df["timestamp"].dt.hour
+        df["day_of_week"] = df["timestamp"].dt.dayofweek
+        df["is_weekend"] = df["day_of_week"].isin([5, 6])
+    
+    # Calculate interaction features
+    if "temperature" in df.columns and "humidity" in df.columns:
+        df["temp_humidity_interaction"] = df["temperature"] * df["humidity"]
+    
+    if "precipitation" in df.columns and "wind_speed" in df.columns:
+        df["weather_severity"] = df["precipitation"] * df["wind_speed"]
+    
+    return df
 
 # Create FastAPI app
 app = FastAPI(

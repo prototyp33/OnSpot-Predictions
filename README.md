@@ -1,138 +1,221 @@
-# Parking Occupancy Prediction System
+# OnSpot Predictive Model
 
-A machine learning system for predicting parking occupancy based on historical data and contextual features.
+A machine learning system for predicting parking occupancy rates using historical data, weather information, and local events.
 
-## Overview
+## Features
 
-This project implements a complete machine learning pipeline for predicting parking occupancy:
+- Advanced time series prediction using LSTM and ensemble models
+- Real-time data integration with weather and event APIs
+- Automated model training and evaluation pipeline
+- RESTful API for easy integration
+- Comprehensive monitoring and alerting system
+- Detailed performance analytics and reporting
 
-1. **Data Preparation**: Clean and prepare raw parking data
-2. **Feature Engineering**: Create basic and advanced features
-3. **Cross-Validation**: Evaluate model performance using time series cross-validation
-4. **Hyperparameter Tuning**: Find optimal model configurations
-5. **Advanced Models**: Experiment with state-of-the-art models
-6. **Model Deployment**: Deploy the best models for production use
-7. **Model Monitoring**: Track model performance over time
+## Directory Structure
+
+```
+OnSpot_Predictive_Model/
+├── src/               # Source code
+│   └── onspot/       # Main package
+├── data/             # Data files
+├── models/           # Model artifacts
+├── config/           # Configuration files
+├── docs/             # Documentation
+├── tests/            # Test suite
+├── notebooks/        # Jupyter notebooks
+├── scripts/          # Utility scripts
+├── monitoring/       # Monitoring tools
+├── results/          # Analysis results
+└── api/              # API implementation
+```
 
 ## Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/parking-occupancy-prediction.git
-cd parking-occupancy-prediction
+### Prerequisites
+- Python 3.8+
+- pip
+- virtualenv (recommended)
+- Git
 
-# Create a virtual environment
+### Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/OnSpot_Predictive_Model.git
+cd OnSpot_Predictive_Model
+```
+
+2. Create and activate virtual environment:
+```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-# Install dependencies
+3. Install dependencies:
+```bash
 pip install -r requirements.txt
+```
+
+4. Set up configuration:
+```bash
+cp config/default.yaml config/local.yaml
+# Edit config/local.yaml with your settings
 ```
 
 ## Usage
 
-### End-to-End Pipeline
+### Quick Start
 
-Run the complete pipeline:
+1. Prepare your data:
+```python
+from onspot.data import DataProcessor
 
+# Load and process data
+processor = DataProcessor()
+data = processor.prepare_data("path/to/data")
+```
+
+2. Train a model:
+```python
+from onspot.models import ParkingModel
+
+# Create and train model
+model = ParkingModel()
+model.train(data)
+```
+
+3. Make predictions:
+```python
+# Make predictions
+predictions = model.predict(features)
+```
+
+### API Usage
+
+1. Start the API server:
 ```bash
-python scripts/end_to_end_pipeline.py --data data/raw_data.csv
+uvicorn api.main:app --reload
 ```
 
-Skip specific steps:
-
+2. Make predictions via API:
 ```bash
-python scripts/end_to_end_pipeline.py --data data/raw_data.csv --skip prepare cv
+curl -X POST "http://localhost:8000/api/v1/predictions" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "location_id": "downtown-1",
+       "timestamp": "2024-03-20T14:30:00Z",
+       "features": {
+         "weather": {"temperature": 18.5},
+         "events": [{"type": "sports", "distance": 0.5}]
+       }
+     }'
 ```
 
-### Individual Components
+## Development
 
-Data preparation:
+### Setting Up Development Environment
 
+1. Install development dependencies:
 ```bash
-python scripts/prepare_data.py --data data/raw_data.csv --output data/prepared_data.csv
+pip install -r requirements-dev.txt
 ```
 
-Cross-validation:
-
+2. Set up pre-commit hooks:
 ```bash
-python scripts/cross_validation.py --data data/prepared_data.csv --n_splits 5
+pre-commit install
 ```
 
-Hyperparameter tuning:
-
+3. Run tests:
 ```bash
-python scripts/hyperparameter_tuning_cv.py --data data/prepared_data.csv --n_iter 50
+pytest
 ```
 
-Advanced models:
+### Code Style
 
+- Follow PEP 8
+- Use type hints
+- Write docstrings
+- Add unit tests
+- Keep it simple
+
+## Documentation
+
+### Building Documentation
+
+1. Install documentation dependencies:
 ```bash
-python scripts/advanced_models.py --data data/prepared_data.csv
+pip install -r docs/requirements.txt
 ```
 
-Model deployment:
-
+2. Build documentation:
 ```bash
-python scripts/deploy_models.py --source hyperparameter_tuning_results --target production_models
+cd docs
+mkdocs build
 ```
 
-Model monitoring:
-
+3. Serve documentation locally:
 ```bash
-python scripts/model_monitoring.py --data data/prepared_data.csv
+mkdocs serve
 ```
 
-### Prediction API
+### Documentation Sections
 
-Start the prediction API:
+- [User Guide](docs/user_guide/): Getting started and tutorials
+- [API Reference](docs/api_reference/): Detailed API documentation
+- [Developer Guide](docs/developer_guide/): Development setup and guidelines
+- [Architecture](docs/architecture/): System design and components
 
-```bash
-python scripts/prediction_api.py
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Write tests
+4. Implement your changes
+5. Submit a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+
+## Monitoring
+
+### Metrics Collection
+
+```python
+from onspot.monitoring import MetricsCollector
+
+# Collect metrics
+collector = MetricsCollector()
+metrics = collector.collect_model_metrics()
 ```
 
-Or using Docker:
+### Alert Configuration
 
-```bash
-docker build -t parking-prediction-api .
-docker run -p 5000:5000 parking-prediction-api
-```
+```python
+from onspot.monitoring import AlertManager
 
-### Dashboard
-
-Launch the model dashboard:
-
-```bash
-streamlit run scripts/model_dashboard_enhanced.py
-```
-
-## Project Structure
-
-```
-├── data/                      # Data files
-│   ├── raw_data.csv           # Raw input data
-│   └── prepared_data.csv      # Processed data
-├── scripts/                   # Python scripts
-│   ├── prepare_data.py        # Data preparation
-│   ├── cross_validation.py    # Cross-validation
-│   ├── hyperparameter_tuning_cv.py  # Hyperparameter tuning
-│   ├── advanced_models.py     # Advanced model training
-│   ├── deploy_models.py       # Model deployment
-│   ├── model_monitoring.py    # Performance monitoring
-│   ├── prediction_api.py      # Prediction API
-│   ├── model_dashboard.py     # Basic dashboard
-│   ├── model_dashboard_enhanced.py  # Enhanced dashboard
-│   └── end_to_end_pipeline.py # Complete pipeline
-├── production_models/         # Deployed models
-├── cross_validation_results/  # Cross-validation results
-├── hyperparameter_tuning_results/  # Tuning results
-├── advanced_models/           # Advanced model results
-├── model_monitoring/          # Monitoring results
-├── Dockerfile                 # Docker configuration
-├── requirements.txt           # Python dependencies
-└── README.md                  # Project documentation
+# Configure alerts
+manager = AlertManager()
+manager.add_alert_rule(
+    metric="error_rate",
+    threshold=0.1
+)
 ```
 
 ## License
 
-[MIT License](LICENSE)
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Authors
+
+- Your Name (@yourusername)
+
+## Acknowledgments
+
+- List any references
+- Credit external libraries
+- Thank contributors
+
+## Contact
+
+- Email: your.email@example.com
+- GitHub: [@yourusername](https://github.com/yourusername)
+- Website: [your-website.com](https://your-website.com)

@@ -1,0 +1,147 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+
+  backend "s3" {
+    bucket         = "onspot-terraform-state"
+    key            = "state/terraform.tfstate"
+    region         = "eu-west-1"
+    encrypt        = true
+    dynamodb_table = "terraform-state-lock"
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+# VPC and Networking
+module "vpc" {
+  source = "./modules/vpc"
+  
+  vpc_cidr             = var.vpc_cidr
+  availability_zones   = var.availability_zones
+  environment         = var.environment
+  project_name        = var.project_name
+}
+
+# ECS Cluster
+module "ecs" {
+  source = "./modules/ecs"
+  
+  project_name        = var.project_name
+  environment         = var.environment
+  vpc_id             = module.vpc.vpc_id
+  private_subnets    = module.vpc.private_subnets
+  public_subnets      = module.vpc.public_subnets
+  container_insights  = true
+}
+
+# ECR Repositories
+module "ecr" {
+  source = "./modules/ecr"
+  
+  project_name = var.project_name
+  environment  = var.environment
+}
+
+# Application Load Balancer
+module "alb" {
+  source = "./modules/alb"
+  
+  project_name     = var.project_name
+  environment      = var.environment
+  vpc_id            = module.vpc.vpc_id
+  public_subnets    = module.vpc.public_subnets
+}
+
+# ECS Services
+module "prediction_service" {
+  source = "./modules/ecs-service"
+  
+  service_name        = "prediction-api"
+  project_name        = var.project_name
+  environment         = var.environment
+  vpc_id              = module.vpc.vpc_id
+  private_subnets     = module.vpc.private_subnets
+  ecs_cluster_id      = module.ecs.cluster_id
+  alb_target_group    = module.alb.prediction_api_target_group
+  ecr_repository      = module.ecr.prediction_api_repository_url
+  container_port      = 5000
+  desired_count       = var.prediction_api_desired_count
+  cpu                 = 512
+  memory              = 1024
+  
+  environment_variables = {
+    MODEL_REGISTRY_PATH     = var.model_registry_path
+    PRODUCTION_MODELS_PATH  = var.production_models_path
+    LOG_LEVEL              = "INFO"
+  }
+}
+
+module "gateway_service" {
+  source = "./modules/ecs-service"
+  
+  service_name        = "deployment-gateway"
+  project_name        = var.project_name
+  environment         = var.environment
+  vpc_id              = module.vpc.vpc_id
+  private_subnets     = module.vpc.private_subnets
+  ecs_cluster_id      = module.ecs.cluster_id
+  alb_target_group    = module.alb.gateway_target_group
+  ecr_repository      = module.ecr.gateway_repository_url
+  container_port      = 8080
+  desired_count       = var.gateway_desired_count
+  cpu                 = 256
+  memory              = 512
+  
+  environment_variables = {
+    PRODUCTION_API = "http://prediction-api:5000"
+    SHADOW_API     = "http://shadow-api:5001"
+    CANARY_API     = "http://canary-api:5002"
+  }
+}
+
+module "monitoring_service" {
+  source = "./modules/ecs-service"
+  
+  service_name        = "monitoring"
+  project_name        = var.project_name
+  environment         = var.environment
+  vpc_id              = module.vpc.vpc_id
+  private_subnets     = module.vpc.private_subnets
+  ecs_cluster_id      = module.ecs.cluster_id
+  alb_target_group    = module.alb.monitoring_target_group
+  ecr_repository      = module.ecr.monitoring_repository_url
+  container_port      = 8000
+  desired_count       = 1
+  cpu                 = 256
+  memory              = 512
+  
+  environment_variables = {
+    PROMETHEUS_URL = "http://prometheus:9090"
+    GATEWAY_API    = "http://deployment-gateway:8080"
+  }
+}
+
+# CloudWatch Monitoring
+module "monitoring" {
+  source = "./modules/monitoring"
+  
+  project_name        = var.project_name
+  environment         = var.environment
+  ecs_cluster_id      = module.ecs.cluster_id
+  alb_arn             = module.alb.alb_arn
+}
+
+# S3 Bucket for Model Storage
+module "s3" {
+  source = "./modules/s3"
+  
+  project_name = var.project_name
+  environment  = var.environment
+} 

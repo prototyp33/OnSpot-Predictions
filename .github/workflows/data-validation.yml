@@ -1,0 +1,58 @@
+name: Data Validation
+
+on:
+  push:
+    paths:
+      - 'data/**/*.csv'
+      - 'data/**/*.json'
+  workflow_dispatch:
+    inputs:
+      data_type:
+        description: 'Type of data to validate'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - feature_engineered
+          - predictions
+          - raw_parking
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Validate data
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          python scripts/validate_data.py ${{ github.event.inputs.data_type }} --output validation_results.json
+        else
+          python scripts/validate_data.py all --output validation_results.json
+        fi
+    
+    - name: Upload validation results
+      uses: actions/upload-artifact@v3
+      with:
+        name: data-validation-results
+        path: validation_results.json
+    
+    - name: Check validation results
+      run: |
+        # Check if any critical validation errors exist
+        if grep -q "critical_errors.*true" validation_results.json; then
+          echo "::error::Critical validation errors found in data"
+          exit 1
+        fi 

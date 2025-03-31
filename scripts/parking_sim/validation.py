@@ -1,18 +1,21 @@
-"""Module for input validation and error handling."""
+"""
+Data validation module for parking occupancy prediction.
+"""
 
+import pandas as pd
+import numpy as np
+from typing import Dict, List, Optional, Union, Tuple, Callable
+import logging
+from datetime import datetime
 import json
 import jsonschema
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-import logging
-import numpy as np
-import pandas as pd
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
 class ValidationError(Exception):
-    """Exception raised for validation errors."""
+    """Custom exception for validation errors."""
     pass
 
 class InputValidator:
@@ -142,12 +145,8 @@ class InputValidator:
         Raises:
             ValidationError: If coordinates are outside valid ranges
         """
-        if not (-90 <= lat <= 90):
-            raise ValidationError(f"Latitude {lat} outside valid range [-90, 90]")
-        
-        if not (-180 <= lon <= 180):
-            raise ValidationError(f"Longitude {lon} outside valid range [-180, 180]")
-        
+        # Use the standalone validate_coordinates function
+        validate_coordinates(lat, lon)
         return lat, lon
     
     @staticmethod
@@ -166,13 +165,10 @@ class InputValidator:
         Raises:
             ValidationError: If value is not positive
         """
-        if allow_zero:
-            if value < 0:
-                raise ValidationError(f"{name} must be non-negative, got {value}")
-        else:
-            if value <= 0:
-                raise ValidationError(f"{name} must be positive, got {value}")
-        
+        if not allow_zero:
+            validate_positive(value, name)
+        elif value < 0:
+            raise ValidationError(f"{name} must be non-negative, got {value}")
         return value
     
     @staticmethod
@@ -197,11 +193,7 @@ class InputValidator:
         Raises:
             ValidationError: If value is outside the range
         """
-        if not (min_val <= value <= max_val):
-            raise ValidationError(
-                f"{name} must be between {min_val} and {max_val}, got {value}"
-            )
-        
+        validate_range(value, min_val, max_val, name)
         return value
     
     @staticmethod
@@ -224,16 +216,14 @@ class InputValidator:
         Raises:
             ValidationError: If DataFrame doesn't meet requirements
         """
-        # Check for empty DataFrame
-        if df.empty:
-            raise ValidationError("DataFrame is empty")
+        # Use the standalone validate_data function for basic validation
+        validate_data(df, {
+            'required_columns': required_columns,
+            'value_ranges': {},
+            'categorical_values': {}
+        })
         
-        # Check for required columns
-        missing_columns = set(required_columns) - set(df.columns)
-        if missing_columns:
-            raise ValidationError(f"Missing required columns: {missing_columns}")
-        
-        # Check data types if specified
+        # Additional type checking if specified
         if dtypes:
             for col, dtype in dtypes.items():
                 if col in df.columns:
@@ -285,18 +275,168 @@ class InputValidator:
         
         return path
 
-# Decorator for input validation
-def validate_inputs(validator_func):
+def validate_data(df: pd.DataFrame, rules: Dict) -> None:
+    """
+    Validate input data according to rules.
+    
+    Parameters:
+    -----------
+    df : pandas.DataFrame
+        Input dataframe to validate
+    rules : Dict
+        Dictionary containing validation rules:
+        - required_columns: List of required column names
+        - numeric_columns: List of numeric column names
+        - categorical_columns: List of categorical column names
+        - value_ranges: Dict of column name to [min, max] range (optional)
+    """
+    logger.debug("Starting data validation")
+    
+    # Check required columns
+    missing_cols = set(rules['required_columns']) - set(df.columns)
+    if missing_cols:
+        raise ValidationError(f"Missing required columns: {missing_cols}")
+    
+    # Validate numeric columns
+    for col in rules['numeric_columns']:
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            raise ValidationError(f"Column {col} should be numeric")
+        
+        # Check for NaN values
+        if df[col].isna().any():
+            raise ValidationError(f"Column {col} contains NaN values")
+            
+        # Check value ranges if specified
+        if 'value_ranges' in rules and col in rules['value_ranges']:
+            min_val, max_val = rules['value_ranges'][col]
+            if df[col].min() < min_val or df[col].max() > max_val:
+                raise ValidationError(
+                    f"Values in {col} should be between {min_val} and {max_val}"
+                )
+    
+    # Validate categorical columns
+    for col in rules['categorical_columns']:
+        if not pd.api.types.is_object_dtype(df[col]) and not pd.api.types.is_categorical_dtype(df[col]):
+            raise ValidationError(f"Column {col} should be categorical")
+        
+        # Check for NaN values
+        if df[col].isna().any():
+            raise ValidationError(f"Column {col} contains NaN values")
+    
+    logger.debug("Data validation completed successfully")
+
+def validate_coordinates(latitude: float, longitude: float) -> None:
+    """
+    Validate geographic coordinates.
+    
+    Parameters:
+    -----------
+    latitude : float
+        Latitude value to validate
+    longitude : float
+        Longitude value to validate
+        
+    Raises:
+    -------
+    ValidationError
+        If coordinates are invalid
+    """
+    # Barcelona bounding box (approximate)
+    BARCELONA_BOUNDS = {
+        'lat_min': 41.3,
+        'lat_max': 41.5,
+        'lon_min': 2.0,
+        'lon_max': 2.3
+    }
+    
+    if not (BARCELONA_BOUNDS['lat_min'] <= latitude <= BARCELONA_BOUNDS['lat_max']):
+        raise ValidationError(
+            f"Latitude {latitude} is outside Barcelona bounds "
+            f"[{BARCELONA_BOUNDS['lat_min']}, {BARCELONA_BOUNDS['lat_max']}]"
+        )
+        
+    if not (BARCELONA_BOUNDS['lon_min'] <= longitude <= BARCELONA_BOUNDS['lon_max']):
+        raise ValidationError(
+            f"Longitude {longitude} is outside Barcelona bounds "
+            f"[{BARCELONA_BOUNDS['lon_min']}, {BARCELONA_BOUNDS['lon_max']}]"
+        )
+
+def validate_positive(value: Union[int, float], name: str) -> None:
+    """
+    Validate that a value is positive.
+    
+    Parameters:
+    -----------
+    value : Union[int, float]
+        Value to validate
+    name : str
+        Name of the value (for error messages)
+        
+    Raises:
+    -------
+    ValidationError
+        If value is not positive
+    """
+    if value <= 0:
+        raise ValidationError(f"{name} must be positive, got {value}")
+
+def validate_range(
+    value: Union[int, float],
+    min_val: Union[int, float],
+    max_val: Union[int, float],
+    name: str
+) -> None:
+    """
+    Validate that a value is within a specified range.
+    
+    Parameters:
+    -----------
+    value : Union[int, float]
+        Value to validate
+    min_val : Union[int, float]
+        Minimum allowed value
+    max_val : Union[int, float]
+        Maximum allowed value
+    name : str
+        Name of the value (for error messages)
+        
+    Raises:
+    -------
+    ValidationError
+        If value is outside the specified range
+    """
+    if not (min_val <= value <= max_val):
+        raise ValidationError(
+            f"{name} must be between {min_val} and {max_val}, got {value}"
+        )
+
+def validate_inputs(validator_func: Callable) -> Callable:
     """
     Decorator to validate function inputs.
     
-    Args:
-        validator_func: Function that validates the inputs
+    Parameters:
+    -----------
+    validator_func : Callable
+        Function that validates the inputs
         
     Returns:
+    --------
+    Callable
         Decorated function with input validation
+        
+    Example:
+    --------
+    def validate_my_inputs(*args, **kwargs):
+        # Validation logic here
+        pass
+        
+    @validate_inputs(validate_my_inputs)
+    def my_function(*args, **kwargs):
+        # Function logic here
+        pass
     """
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
         def wrapper(*args, **kwargs):
             # Run validator function with the same arguments
             validator_func(*args, **kwargs)

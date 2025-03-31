@@ -1,0 +1,58 @@
+# Development Environment Configuration for OnSpot Predictive Model
+# Extends the base configuration with development-specific settings
+
+# Import base configuration
+defaults:
+  - ../default/base
+
+# Override paths for development environment
+paths:
+  data_dir: "data"
+  models_dir: "models/development"
+  results_dir: "results/development"
+  logs_dir: "logs/development"
+
+# Development-specific data settings
+data:
+  # Use smaller dataset for faster development
+  processed_data:
+    default: "${paths.data_dir}/sample_data.csv"
+  
+  validation:
+    # More lenient validation for development
+    threshold: 0.1
+
+# Development-specific model settings
+model:
+  # Use simpler algorithms for faster iteration
+  default_algorithm: "GradientBoostingRegressor"
+  
+  cross_validation:
+    # Fewer splits for faster validation
+    n_splits: 3
+    
+  hyperparameter_tuning:
+    # Fewer iterations for faster tuning
+    n_iter: 10
+    n_jobs: 2
+  
+  training:
+    save_checkpoints: true
+    checkpoint_frequency: 5
+  
+  ensemble:
+    # Simpler ensembles for development
+    use_ensembles: false
+    algorithms: ["xgboost", "lightgbm"]
+    stacking: false
+
+# Development API settings
+api:
+  debug: true
+  port: 5001
+
+# Development logging settings
+logging:
+  level: "DEBUG"
+  rotation: "1 day"
+  retention: "7 days" 

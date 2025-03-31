@@ -1,0 +1,87 @@
+# Script Reorganization Plan
+
+## Data Processing Scripts
+scripts/data/
+- load_data.py                 <- scripts/load_data.py
+- prepare_data.py              <- scripts/prepare_data.py
+- data_utils.py                <- scripts/data_utils.py
+- define_features.py           <- scripts/define_features.py
+- validation_utils.py          <- scripts/validation_utils.py
+- validate_data.py             <- scripts/validate_data.py
+- data_validators.py           <- scripts/data_validators.py
+- validate_features.py         <- scripts/validate_features.py
+- fix_data_issues.py           <- scripts/fix_data_issues.py
+- mergedata1.py                <- scripts/mergedata1.py
+- mergereview1.py              <- scripts/mergereview1.py
+- csvtojson.py                 <- scripts/csvtojson.py
+- analyze_splits.py            <- scripts/analyze_splits.py
+- split_data.py                <- scripts/split_data.py
+- mlsimulationdata.py          <- scripts/mlsimulationdata.py
+- generate_sample_data.py      <- scripts/generate_sample_data.py
+
+## Model Scripts
+scripts/models/
+- advanced_models.py           <- scripts/advanced_models.py
+- advanced_models_original.py  <- scripts/advanced_models_original.py
+- cross_validation.py          <- scripts/cross_validation.py
+- hyperparameter_tuning_cv.py  <- scripts/hyperparameter_tuning_cv.py
+- ensemble_model.py            <- scripts/ensemble_model.py
+- compare_models.py            <- scripts/compare_models.py
+- compare_models_simple.py     <- scripts/compare_models_simple.py
+- analyze_model_results.py     <- scripts/analyze_model_results.py
+- analyze_data.py              <- scripts/analyze_data.py
+- correlation_analysis.py      <- scripts/correlation_analysis.py
+- correlation_analysis_fixed.py <- scripts/correlation_analysis_fixed.py
+- compare_feature_impact.py    <- scripts/compare_feature_impact.py
+- compare_feature_impact_fixed.py <- scripts/compare_feature_impact_fixed.py
+- test_variables.py            <- scripts/test_variables.py
+- tune_weights.py              <- scripts/tune_weights.py
+
+## Pipeline Scripts
+scripts/pipeline/
+- end_to_end_pipeline.py       <- scripts/end_to_end_pipeline.py
+- automated_pipeline.py        <- scripts/automated_pipeline.py
+- train_pipeline.py            <- scripts/train_pipeline.py
+- deploy_models.py             <- scripts/deploy_models.py
+
+## Monitoring Scripts
+scripts/monitoring/
+- model_monitoring.py          <- scripts/model_monitoring.py
+- automated_monitoring.py      <- scripts/automated_monitoring.py
+- schedule_monitoring.py       <- scripts/schedule_monitoring.py
+- dynamic_scheduler.py         <- scripts/dynamic_scheduler.py
+- fix_model_monitoring.py      <- scripts/fix_model_monitoring.py
+- retraining_scheduler.py      <- scripts/retraining_scheduler.py
+- scheduled_retraining.py      <- scripts/scheduled_retraining.py
+- setup_retraining_schedule.py <- scripts/setup_retraining_schedule.py
+
+## API Scripts
+scripts/api/
+- prediction_api.py            <- scripts/prediction_api.py
+- main.py                      <- scripts/main.py
+
+## Utility Scripts
+scripts/utils/
+- run_tests.py                 <- scripts/run_tests.py
+- json_test.py                 <- scripts/json_test.py
+
+## Database Integration
+scripts/db/
+- supabase_integration.py      <- scripts/supabase_integration.py
+- supabase_utils.py            <- scripts/supabase_utils.py
+- db_integration.py            <- scripts/db_integration.py
+- upload_data.py               <- scripts/upload_data.py
+- upload_single_table.py       <- scripts/upload_single_table.py
+- test_supabase.py             <- scripts/test_supabase.py
+- test_connection.py           <- scripts/test_connection.py
+- test_supabase_connection.py  <- scripts/test_supabase_connection.py
+- supabase_setup.py            <- scripts/supabase_setup.py
+- supabase_metrics_extension.py <- scripts/supabase_metrics_extension.py
+- supabase_monitor.py          <- scripts/supabase_monitor.py
+- supabase_monitor_demo.py     <- scripts/supabase_monitor_demo.py
+- execute_schema_initialization.py <- scripts/execute_schema_initialization.py
+- execute_schema_migration.py  <- scripts/execute_schema_migration.py
+- apply_schema_migration.py    <- scripts/apply_schema_migration.py
+- system_health.py             <- scripts/system_health.py
+- update_application_code.py   <- scripts/update_application_code.py
+- apply_migrations.py          <- scripts/apply_migrations.py 

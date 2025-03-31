@@ -1,54 +1,173 @@
 version: '3.8'
 
 services:
-  api:
+  # Main prediction service
+  prediction-api:
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: docker/prediction-api/Dockerfile
     ports:
-      - "8000:8000"
+      - "5000:5000"
     volumes:
-      - ./models:/app/models
-      - ./data:/app/data
+      - model-storage:/models
     environment:
-      - MODEL_DIR=models/production
+      - MODEL_REGISTRY_PATH=/models/registry
+      - PRODUCTION_MODELS_PATH=/models/production
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - onspot-network
+
+  # Shadow deployment service (receives same traffic but responses don't reach users)
+  shadow-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./model_registry:/app/model_registry:ro
+      - ./production_models:/app/production_models:ro
+    environment:
+      - MODEL_REGISTRY_PATH=./model_registry
+      - PRODUCTION_MODELS_PATH=./production_models
+      - DEPLOYMENT_TYPE=shadow
+      - SHADOW_MODEL_VERSION=latest_candidate
       - LOG_LEVEL=INFO
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+  
+  # Canary deployment service (subset of traffic)
+  canary-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./model_registry:/app/model_registry:ro
+      - ./production_models:/app/production_models:ro
+    environment:
+      - MODEL_REGISTRY_PATH=./model_registry
+      - PRODUCTION_MODELS_PATH=./production_models
+      - DEPLOYMENT_TYPE=canary
+      - CANARY_MODEL_VERSION=latest_candidate
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Deployment gateway (routes traffic based on deployment strategy)
+  deployment-gateway:
+    build:
+      context: .
+      dockerfile: docker/gateway/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - PRODUCTION_API=http://prediction-api:5000
+      - SHADOW_API=http://shadow-api:5001
+      - CANARY_API=http://canary-api:5002
+    depends_on:
+      - prediction-api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - onspot-network
+
+  # Monitoring service (collects and reports metrics)
+  monitoring:
+    build:
+      context: .
+      dockerfile: docker/monitoring/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - GATEWAY_API=http://deployment-gateway:8080
+    depends_on:
+      - prometheus
+      - deployment-gateway
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - onspot-network
 
-  dashboard:
-    build:
-      context: ./onspot-dashboard
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - onspot-network
+
+  grafana:
+    image: grafana/grafana:10.0.0
     ports:
       - "3000:3000"
-    depends_on:
-      - api
     environment:
-      - API_URL=http://api:8000
-    restart: unless-stopped
-
-  monitoring:
-    build:
-      context: .
-      dockerfile: monitoring/Dockerfile
-    ports:
-      - "8001:8001"
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
-      - ./models:/app/models
-      - ./data:/app/data
-      - ./monitoring:/app/monitoring
-    environment:
-      - MODEL_DIR=models/production
-      - LOG_LEVEL=INFO
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
     depends_on:
-      - api
+      - prometheus
     restart: unless-stopped
+    networks:
+      - onspot-network
+
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - onspot-network
+
+volumes:
+  model-storage:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  redis-data:
+    driver: local
 
 networks:
-  default:
-    name: onspot-network 
+  onspot-network:
+    driver: bridge 

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Feature Analysis Report: {{ feature_name }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+        }
+        .feature-header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        .feature-type {
+            display: inline-block;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .stats-table th, .stats-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stats-table th {
+            background-color: #f8f9fa;
+        }
+        .test-results {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .test-result {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 4px solid #dee2e6;
+        }
+        .test-result.significant {
+            border-left-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .test-result.not-significant {
+            border-left-color: #28a745;
+            background-color: #f8fff8;
+        }
+        .visualization {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .visualization img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .timestamp {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 40px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="feature-header">
+        <h1>Feature Analysis Report: {{ feature_name }}</h1>
+        <span class="feature-type">{{ feature_type|title }} Feature</span>
+    </div>
+
+    <h2>Basic Statistics</h2>
+    {{ basic_stats|safe }}
+
+    <h2>Statistical Test Results</h2>
+    <div class="test-results">
+        {% for line in statistical_results.split('\n') %}
+            <div class="test-result {% if '⚠️' in line %}significant{% else %}not-significant{% endif %}">
+                {{ line }}
+            </div>
+        {% endfor %}
+    </div>
+
+    <h2>Visualizations</h2>
+    {% for viz_type, viz_path in visualization_paths.items() %}
+        <div class="visualization">
+            <h3>{{ viz_type|replace('_', ' ')|title }}</h3>
+            <img src="{{ viz_path }}" alt="{{ viz_type }} visualization">
+        </div>
+    {% endfor %}
+
+    <div class="timestamp">
+        Report generated at: {{ timestamp }}
+    </div>
+</body>
+</html> 

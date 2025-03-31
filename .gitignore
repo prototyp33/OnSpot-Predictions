@@ -1,7 +1,102 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Distribution / packaging
+*.tar.gz
+*.tgz
+*.zip
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+log/
+
+# Data
+data/raw/*
+data/interim/*
+data/processed/*
+data/external/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# Models
+models/trained/*
+models/experiments/*
+!models/trained/.gitkeep
+!models/experiments/.gitkeep
+
+# Results
+results/experiments/*
+results/evaluation/*
+results/predictions/*
+results/monitoring/*
+results/reports/*
+!results/experiments/.gitkeep
+!results/evaluation/.gitkeep
+!results/predictions/.gitkeep
+!results/monitoring/.gitkeep
+!results/reports/.gitkeep
+
+# Documentation build
+site/
+docs/_build/
+
+# OS
+.DS_Store
+Thumbs.db
 
 # C extensions
 *.so
@@ -75,9 +170,6 @@ docs/_build/
 .pybuilder/
 target/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
 # IPython
 profile_default/
 ipython_config.py
@@ -127,15 +219,6 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -177,3 +260,22 @@ data/barcelona_parking.parking_predictions.csv
 feature_engineered.json
 data/cleaned_OSM-parking_data.csv
 node_modules
+
+# CI/CD related
+.coverage
+coverage.xml
+.pytest_cache/
+benchmark.json
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.coverage.*
+model_performance.json
+data_drift.json
+monitoring_report.html
+validation_results.json
+
+# GitHub Actions related
+act-artifacts/
+act-secrets.env

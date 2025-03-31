@@ -1,0 +1,54 @@
+{
+  "numeric_features": [
+    "hour",
+    "day_of_week",
+    "month",
+    "hour_sin_halfday",
+    "hour_cos_halfday",
+    "hours_since_midnight",
+    "days_since_month_start",
+    "days_until_month_end",
+    "days_to_holiday"
+  ],
+  "categorical_features": {
+    "tipo": [
+      "tipo_BLAVA",
+      "tipo_VERDA"
+    ],
+    "tarifa": [
+      "tarifa_2,25 E/h <= 2h",
+      "tarifa_2,50 E/h <= 2h",
+      "tarifa_2,75 E/h <= 2h",
+      "tarifa_3,00 E/h <= 1h",
+      "tarifa_3,00 E/h <= 2h"
+    ],
+    "location_cluster": [
+      "location_cluster_morning_peak",
+      "location_cluster_evening_peak",
+      "location_cluster_is_weekend",
+      "location_cluster_0",
+      "location_cluster_1",
+      "location_cluster_2",
+      "location_cluster_3",
+      "location_cluster_4"
+    ]
+  },
+  "binary_features": [
+    "morning_peak",
+    "midday",
+    "evening_peak",
+    "night",
+    "business_hours",
+    "workday",
+    "monday",
+    "friday",
+    "saturday",
+    "sunday",
+    "is_holiday",
+    "high_season",
+    "shoulder_season",
+    "low_season",
+    "school_year",
+    "school_holiday"
+  ]
+}

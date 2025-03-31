@@ -1,7 +1,60 @@
-pytest==7.4.0
-pytest-cov==4.1.0
-# line_profiler is incompatible with Python 3.13
-# Use memory_profiler instead
+# Install base requirements
+-r requirements.txt
+
+# Development Tools
+black>=21.9b0           # Code formatting
+flake8>=3.9.0          # Code linting
+isort>=5.9.3           # Import sorting
+mypy>=0.910            # Type checking
+pre-commit>=2.15.0     # Pre-commit hooks
+pylint>=2.11.0         # Code analysis
+
+# Testing
+pytest>=6.2.5          # Testing framework
+pytest-cov>=2.12.0     # Coverage reporting
+pytest-mock>=3.6.1     # Mocking
+pytest-xdist>=2.4.0    # Parallel testing
+pytest-benchmark>=3.4.1 # Performance testing
+hypothesis>=6.14.0     # Property-based testing
+
+# Documentation
+mkdocs>=1.2.3          # Documentation generator
+mkdocs-material>=8.0.0 # Material theme
+mkdocstrings>=0.16.0   # Python API documentation
+mkdocs-jupyter>=0.20.0 # Jupyter notebook support
+
+# Debugging
+ipython>=7.28.0        # Interactive shell
+ipdb>=0.13.9          # IPython debugger
+line-profiler>=3.3.1   # Line-by-line profiling
+
+# Code Quality
+bandit>=1.7.0          # Security linting
+safety>=1.10.3         # Dependency security
+vulture>=2.3           # Dead code detection
+radon>=5.1.0           # Code metrics
+
+# Type Checking
+types-requests>=2.26.0
+types-PyYAML>=5.4.1
+types-python-dateutil>=2.8.2
+
+# Development Utilities
+bump2version>=1.0.1    # Version management
+twine>=3.4.2          # Package publishing
+wheel>=0.37.0         # Package building
+build>=0.7.0          # Package building
+
+# For property-based testing
+hypothesis-pandas==0.4.0
+hypothesis-numpy==2.0.0
+
+# For notebooks (optional)
+jupyterlab==4.0.5
+ipywidgets==8.1.0
+
+# For profiling
+py-spy==0.3.14
 memory_profiler==0.61.0
 psutil==5.9.5
 jsonschema==4.19.0

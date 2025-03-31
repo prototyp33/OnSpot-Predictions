@@ -1,0 +1,93 @@
+name: Scheduled Model Retraining
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Model to retrain (leave empty for scheduled check)'
+        required: false
+        type: string
+      force:
+        description: 'Force retraining regardless of schedule'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  check_retraining:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Download latest data
+      run: |
+        # This step would download any required data from a data source
+        # For example: aws s3 cp s3://onspot-data/latest/ ./data/latest/ --recursive
+        echo "Downloading latest data for retraining..."
+    
+    - name: Check models due for retraining
+      id: check_models
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.model }}" != "" ]; then
+          if [ "${{ github.event.inputs.force }}" == "true" ]; then
+            echo "RETRAIN_MODELS=${{ github.event.inputs.model }}" >> $GITHUB_ENV
+            echo "FORCE_RETRAIN=--force" >> $GITHUB_ENV
+            echo "Models to retrain: ${{ github.event.inputs.model }} (forced)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "RETRAIN_MODELS=${{ github.event.inputs.model }}" >> $GITHUB_ENV
+            echo "FORCE_RETRAIN=" >> $GITHUB_ENV
+            echo "Models to retrain: ${{ github.event.inputs.model }}" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          # Use the scheduled retraining script to check which models need retraining
+          MODELS_DUE=$(python scripts/scheduled_retraining.py --check-only --output-format=csv)
+          echo "RETRAIN_MODELS=$MODELS_DUE" >> $GITHUB_ENV
+          echo "FORCE_RETRAIN=" >> $GITHUB_ENV
+          echo "Models due for retraining: $MODELS_DUE" >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Retrain models
+      if: env.RETRAIN_MODELS != ''
+      run: |
+        echo "Retraining models: $RETRAIN_MODELS"
+        for MODEL in $(echo $RETRAIN_MODELS | tr ',' '\n'); do
+          echo "Retraining $MODEL..."
+          python scripts/scheduled_retraining.py --model $MODEL $FORCE_RETRAIN
+        done
+    
+    - name: Upload retrained models
+      if: env.RETRAIN_MODELS != ''
+      uses: actions/upload-artifact@v3
+      with:
+        name: retrained-models
+        path: models/
+    
+    - name: Update retraining history
+      if: env.RETRAIN_MODELS != ''
+      run: |
+        # Record retraining event
+        echo "Updating retraining history..."
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        # Create or update retraining history file
+        DATE=$(date +"%Y-%m-%d")
+        echo "$DATE: Retrained models - $RETRAIN_MODELS" >> logs/retraining_history.txt
+        
+        # Commit if there are changes
+        git add logs/retraining_history.txt
+        git commit -m "Update retraining history for $DATE" || echo "No changes to commit"
+        git push 

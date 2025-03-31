@@ -1,0 +1,15 @@
+{
+  "connection": {
+    "status": "passed",
+    "details": [
+      "Successfully connected to Supabase"
+    ]
+  },
+  "tables": {},
+  "relationships": [],
+  "summary": {
+    "passed": 0,
+    "failed": 0,
+    "warnings": 0
+  }
+}

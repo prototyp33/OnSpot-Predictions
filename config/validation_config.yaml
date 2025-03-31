@@ -1,0 +1,110 @@
+# Validation Configuration
+
+# Data Configuration
+data:
+  splits_dir: "data/splits"
+  feature_engineering_version: "1.0.0"
+  timestamp_column: "timestamp"
+  target_column: "occupancy"
+
+# Feature Groups Configuration
+feature_groups:
+  temporal:
+    - "hour"
+    - "day_of_week"
+    - "month"
+    - "is_weekend"
+    - "is_holiday"
+  spatial:
+    - "location_cluster"
+    - "near_metro"
+    - "city_center"
+    - "near_beach"
+  weather:
+    - "temperature"
+    - "humidity"
+    - "precipitation"
+  derived:
+    - "comfort_index"
+    - "utilization_pct"
+
+# Analysis Configuration
+analysis:
+  statistical_tests:
+    ks_test:
+      enabled: true
+      significance_level: 0.05
+    chi_squared:
+      enabled: true
+      significance_level: 0.05
+    psi:
+      enabled: true
+      threshold: 0.20
+      bins: 10
+    mann_whitney:
+      enabled: true
+      significance_level: 0.05
+  
+  visualization:
+    style: seaborn
+    color_palette: deep
+    figsize: [10, 6]
+    dpi: 100
+    continuous_plots:
+      - histogram
+      - kde
+      - box
+      - qq
+    categorical_plots:
+      - bar
+      - pie
+    
+    # Plot customization
+    colors:
+      train: "#2ecc71"  # Green
+      validation: "#3498db"  # Blue
+      test: "#e74c3c"  # Red
+    
+    # Font settings
+    font:
+      family: sans-serif
+      size: 10
+      title_size: 12
+    
+    # Legend settings
+    legend:
+      location: best
+      frameon: true
+    
+    # Grid settings
+    grid:
+      show: true
+      alpha: 0.3
+      linestyle: "--"
+
+# Output Configuration
+output:
+  base_dir: "validation_results"
+  subdirs:
+    distributions: "distributions"
+    statistics: "statistics"
+    reports: "reports"
+    metadata: "metadata"
+  formats:
+    data: "json"
+    plots: "png"
+    reports: "html"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "validation_results/validation.log"
+
+# Thresholds for Flagging Issues
+thresholds:
+  drift_significance: 0.05
+  correlation_significance: 0.5
+  missing_ratio: 0.1
+  class_imbalance: 0.1
+  variance_ratio: 0.5  # max allowed ratio between split variances 

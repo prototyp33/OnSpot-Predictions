@@ -1,0 +1,132 @@
+{
+  "training_date": "2025-03-27T19:01:06.162909",
+  "config": {
+    "data_path": "data/cleaned_parking_data_with_features.csv",
+    "output_dir": "production_models",
+    "target_column": "occupancy_level",
+    "features": {
+      "base_features": [
+        "hour",
+        "day_of_week",
+        "month",
+        "tipo",
+        "tarifa"
+      ],
+      "engineered_features": [
+        "morning_peak",
+        "midday",
+        "evening_peak",
+        "night",
+        "business_hours",
+        "workday",
+        "monday",
+        "friday",
+        "saturday",
+        "sunday",
+        "hour_sin_halfday",
+        "hour_cos_halfday",
+        "hours_since_midnight",
+        "days_since_month_start",
+        "days_until_month_end",
+        "location_cluster",
+        "is_holiday",
+        "days_to_holiday",
+        "high_season",
+        "shoulder_season",
+        "low_season",
+        "school_year",
+        "school_holiday"
+      ]
+    },
+    "training": {
+      "window_size": 1,
+      "step_size": 1,
+      "min_samples": 50,
+      "validation_split": 0.2,
+      "random_state": 42
+    },
+    "model_params": {
+      "n_estimators": 100,
+      "max_depth": 20,
+      "min_samples_split": 10,
+      "min_samples_leaf": 4
+    },
+    "validation_rules": {
+      "required_columns": [
+        "datetime",
+        "lat",
+        "lon",
+        "occupancy_level",
+        "tipo"
+      ],
+      "value_ranges": {
+        "occupancy_level": [
+          0,
+          100
+        ],
+        "lat": [
+          41.3,
+          41.5
+        ],
+        "lon": [
+          2.0,
+          2.3
+        ]
+      },
+      "categorical_values": {
+        "_comment": "VERDA (Green) zones are primarily for residents, BLAVA (Blue) zones are for general public parking",
+        "tipo": [
+          "VERDA",
+          "BLAVA"
+        ]
+      }
+    }
+  },
+  "feature_columns": [
+    "hour",
+    "day_of_week",
+    "month",
+    "hour_sin_halfday",
+    "hour_cos_halfday",
+    "hours_since_midnight",
+    "days_since_month_start",
+    "days_until_month_end",
+    "days_to_holiday",
+    "morning_peak",
+    "midday",
+    "evening_peak",
+    "night",
+    "business_hours",
+    "workday",
+    "monday",
+    "friday",
+    "saturday",
+    "sunday",
+    "is_holiday",
+    "high_season",
+    "shoulder_season",
+    "low_season",
+    "school_year",
+    "school_holiday",
+    "location_cluster_morning_peak",
+    "location_cluster_evening_peak",
+    "location_cluster_is_weekend",
+    "tipo_BLAVA",
+    "tipo_VERDA",
+    "tarifa_2,25 E/h <= 2h",
+    "tarifa_2,50 E/h <= 2h",
+    "tarifa_2,75 E/h <= 2h",
+    "tarifa_3,00 E/h <= 1h",
+    "tarifa_3,00 E/h <= 2h",
+    "location_cluster_0",
+    "location_cluster_1",
+    "location_cluster_2",
+    "location_cluster_3",
+    "location_cluster_4"
+  ],
+  "preprocessing": {
+    "scaler": "StandardScaler",
+    "categorical_encoding": "one-hot",
+    "binary_features": "no_transformation"
+  }
+}

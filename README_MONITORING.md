@@ -1,182 +1,222 @@
-# ML Model Monitoring and Dynamic Scheduling System
+# Supabase Monitoring System
 
-This document describes the comprehensive monitoring and dynamic scheduling system implemented for the OnSpot Predictive Model. The system automatically monitors data drift, model performance, and adaptively schedules model retraining based on real-time observations.
+This document describes the Supabase monitoring system implemented for the OnSpot Predictive Model project. The monitoring system provides comprehensive visibility into Supabase database performance, health metrics, and schema organization.
 
-## System Components
+## Overview
 
-### 1. Monitoring Components
+The monitoring system consists of several components that work together to provide a complete view of Supabase health and performance:
 
-- **Data Drift Detection** (`DataDriftMonitor` class)
-  - Tracks changes in feature distribution over time
-  - Uses Kolmogorov-Smirnov tests and statistical comparisons
-  - Detects when new data significantly differs from baseline
+1. **Core Monitoring** - Tracks database operations, response times, and errors
+2. **Metrics Extension** - Integrates with external systems and provides health analysis
+3. **Dashboard** - Web-based UI for viewing performance metrics and health status
+4. **System Health** - Collects and tracks overall system performance metrics
+5. **Schema Migration** - Tools for organizing tables into logical schemas
 
-- **Performance Monitoring** (`PerformanceMonitor` class)
-  - Tracks key metrics (RMSE, accuracy, F1, etc.)
-  - Identifies performance degradation trends
-  - Supports both classification and regression metrics
+## Installation
 
-- **Visualization & Reporting** (`MonitoringDashboard` class)
-  - Generates human-readable reports
-  - Visualizes performance trends over time
-  - Provides drift analysis for each feature
+### Requirements
 
-### 2. Dynamic Scheduling Components
+The monitoring system has the following dependencies:
 
-- **Dynamic Interval Calculation** (`DynamicScheduler` class)
-  - Adjusts retraining intervals based on real-time data
-  - Combines drift factors and performance factors
-  - Enforces minimum and maximum interval limits
+```
+# Core dependencies
+psycopg2-binary
+python-dotenv
+requests
 
-- **Schedule Management**
-  - Tracks model training history
-  - Records retraining decisions and their rationales
-  - Manages multiple models with separate schedules
+# Optional dependencies
+fastapi
+uvicorn
+jinja2
+psutil
+```
 
-### 3. Integration Components
+To install all dependencies:
 
-- **Automated Monitoring Pipeline** (`MonitoringPipeline` class)
-  - Orchestrates the complete monitoring workflow
-  - Triggers retraining when necessary
-  - Integrates drift detection, performance evaluation, and scheduling
+```bash
+pip install psycopg2-binary python-dotenv requests fastapi uvicorn jinja2 psutil
+```
 
-- **Scheduling Tools**
-  - Sets up scheduled tasks/cron jobs
-  - Configures monitoring frequency
-  - Supports different operating systems
+## Usage
+
+### Monitoring Supabase Operations
+
+The monitoring system can be used to track Supabase operations by decorating functions that interact with the database:
+
+```python
+from scripts.supabase_monitor import monitor_select, monitor_insert
+
+class UserRepository:
+    @monitor_select
+    def get_user(self, user_id):
+        # Database operation to get user
+        pass
+    
+    @monitor_insert
+    def create_user(self, user_data):
+        # Database operation to create user
+        pass
+```
+
+### Starting the Dashboard
+
+To start the monitoring dashboard:
+
+```python
+from scripts.supabase_dashboard import SupabaseDashboard
+
+dashboard = SupabaseDashboard()
+dashboard.start(open_browser=True)
+```
+
+### Running System Health Monitoring
+
+To collect system health metrics:
+
+```bash
+# Run once and exit
+python scripts/system_health.py
+
+# Run as a daemon
+python scripts/system_health.py --daemon
+
+# Generate a report
+python scripts/system_health.py --report --days 7 --out health_report.json
+```
+
+### Managing Schema Migration
+
+To organize tables into logical schemas:
+
+```bash
+# Dry run (no changes)
+python scripts/execute_schema_migration.py --dry-run
+
+# Execute migration
+python scripts/execute_schema_migration.py
+
+# Update application code to use new schemas
+python scripts/update_application_code.py
+```
+
+## Components
+
+### Core Monitoring (`scripts/supabase_monitor.py`)
+
+This module provides:
+
+- Query performance tracking
+- Error rate monitoring
+- Operation counts by type
+- Latency metrics (average, P95, P99)
+
+### Metrics Extension (`scripts/supabase_metrics_extension.py`)
+
+This module provides:
+
+- Health checks and alerting
+- Integration with external monitoring systems
+- Historical metric collection and analysis
+
+### Dashboard (`scripts/supabase_dashboard.py`)
+
+This module provides:
+
+- Web-based UI for monitoring Supabase
+- Real-time charts and metrics
+- Query history and error visibility
+
+### System Health (`scripts/system_health.py`)
+
+This module provides:
+
+- Overall system performance monitoring
+- API endpoint health checks
+- Resource usage tracking (CPU, memory, disk)
+- Health reporting and alerting
+
+### Schema Migration (`scripts/execute_schema_migration.py`)
+
+This module provides:
+
+- Execution of schema migration SQL
+- Transaction handling and rollback on errors
+- Detailed reporting of migration results
+
+## Directory Structure
+
+```
+scripts/
+├── supabase_monitor.py          # Core monitoring
+├── supabase_metrics_extension.py # Metrics extension
+├── supabase_dashboard.py        # Dashboard
+├── supabase_setup.py            # Setup and configuration
+├── system_health.py             # System health monitoring
+├── execute_schema_migration.py  # Schema migration execution
+├── migrate_schemas.sql          # SQL migration file
+└── update_application_code.py   # Code update for schema migration
+```
+
+## Schema Organization
+
+The monitoring system supports the organization of database tables into logical schemas for better structure, security, and maintenance:
+
+- **Core Schema** (`core`) - Models, predictions, and parking data
+- **Monitoring Schema** (`monitoring`) - Drift analysis and retraining events
+- **Analytics Schema** (`analytics`) - Business and location metrics
+- **Experimentation Schema** (`experimentation`) - A/B tests and variants
+- **Auth Schema** (`auth`) - Users and roles
 
 ## Configuration
 
-The monitoring and scheduling system is configured through:
+Configuration is handled via environment variables or configuration files:
+
+### Environment Variables
+
+```
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+SUPABASE_DB_HOST=your_db_host
+SUPABASE_DB_NAME=your_db_name
+SUPABASE_DB_USER=your_db_user
+SUPABASE_DB_PASSWORD=your_db_password
+SUPABASE_DB_PORT=your_db_port
+```
+
+### Configuration Files
+
+Custom configuration can be provided via JSON files:
 
 ```json
 {
-  "drift_thresholds": {
-    "ks_statistic": 0.1,
-    "mean_difference": 0.1,
-    "std_difference": 0.2
-  },
-  "performance_thresholds": {
-    "accuracy_drop": 0.05,
-    "f1_drop": 0.05,
-    "rmse_increase": 0.1
-  },
-  "monitoring": {
-    "check_frequency_hours": 24,
-    "baseline_update_days": 30
-  },
-  "dynamic_scheduling": {
-    "enabled": true,
-    "base_interval_days": 30,
-    "adjustment_limits": {
-      "min_interval_days": 7,
-      "max_interval_days": 60
-    },
-    "drift_thresholds": {
-      "low": 0.1, 
-      "medium": 0.3,
-      "high": 0.5
-    }
+  "collection_interval": 300,
+  "retention_days": 30,
+  "metrics_file": "system_health_metrics.json",
+  "thresholds": {
+    "cpu_percent": 80,
+    "memory_percent": 85,
+    "disk_percent": 90,
+    "api_response_time": 2000
   }
 }
 ```
 
-## How Dynamic Scheduling Works
+## Extending the System
 
-The dynamic scheduling system adjusts retraining intervals based on three main factors:
+The monitoring system is designed to be extensible:
 
-1. **Data Drift Factor**
-   - **High Drift (>0.5)**: Halves the retraining interval
-   - **Medium Drift (0.3-0.5)**: Reduces interval by 25%
-   - **Low Drift (<0.1)**: Increases interval by 25%
-   - **Normal Drift**: Maintains the same interval
+1. **Custom Metrics** - Add new metrics by extending the monitoring classes
+2. **Additional Dashboards** - Create specialized dashboards for specific monitoring needs
+3. **Integration** - Integrate with external monitoring systems via the metrics extension
 
-2. **Performance Factor**
-   - **Severe Degradation**: Reduces interval by 50%
-   - **Significant Degradation**: Reduces interval by 25%
-   - **Mild Degradation**: Reduces interval by 10%
-   - **Stable Performance**: Maintains the same interval
+## Troubleshooting
 
-3. **Resource Factor** (Placeholder)
-   - In future implementations, this will adjust based on system resource availability and training costs
+Common issues and solutions:
 
-The system then combines these factors to calculate a new interval:
-```
-new_interval = base_interval * drift_factor * performance_factor * resource_factor
-```
+1. **Missing dependencies** - Ensure all required packages are installed
+2. **Database connection errors** - Check environment variables and database credentials
+3. **Dashboard access issues** - Ensure the port is not in use and firewalls allow access
 
-Interval adjustments are limited by configurable minimum and maximum values to prevent excessive or too infrequent retraining.
+## License
 
-## Usage
-
-### Monitoring Data and Performance
-
-Run the automated monitoring pipeline:
-
-```bash
-python scripts/automated_monitoring.py --data data/new_data.csv
-```
-
-Options:
-- `--data`: Path to new data file
-- `--model-dir`: Directory containing model files
-- `--baseline`: Path to baseline data file
-- `--config`: Path to configuration file
-- `--output`: Directory for monitoring results
-
-### Setting Up Scheduled Monitoring
-
-Configure automatic monitoring at regular intervals:
-
-```bash
-python scripts/schedule_monitoring.py --data data/feature_engineered_data.csv
-```
-
-Options:
-- `--data`: Path to data file to monitor
-- `--config`: Path to configuration file
-- `--manual`: Create manual execution script instead of scheduled task
-- `--monitoring-script`: Path to monitoring script to schedule
-
-### Managing Dynamic Scheduling
-
-View and update model retraining schedules:
-
-```bash
-python scripts/dynamic_scheduler.py --list-due
-```
-
-Options:
-- `--config`: Path to configuration file
-- `--model-id`: Model ID to update schedule for
-- `--list-due`: List models due for retraining
-- `--update-schedule`: Update retraining schedule
-- `--log-retraining`: Log a retraining event
-
-## Monitoring Reports
-
-The system generates several types of reports and logs:
-
-1. **Drift Reports**: Text reports of drift metrics for each feature
-2. **Performance Reports**: Trends in model metrics over time
-3. **Retraining Logs**: Records of retraining decisions and outcomes
-4. **Scheduling Logs**: History of scheduled retraining and interval adjustments
-
-All reports are stored in the directories specified in the configuration.
-
-## Integration with Retraining
-
-When models are due for retraining (based on either drift, performance degradation, or scheduled intervals), the system automatically:
-
-1. Logs the retraining decision and reason
-2. Triggers the retraining process
-3. Updates the dynamic schedule based on the latest information
-4. Generates a report on the retraining outcome
-
-## Benefits of Dynamic Scheduling
-
-1. **Resource Efficiency**: Avoids unnecessary retraining when models remain stable
-2. **Responsiveness**: Quickly retrains models when significant changes occur
-3. **Adaptability**: Automatically adjusts to changing data patterns
-4. **Transparency**: Provides clear rationale for retraining decisions
-5. **Automation**: Reduces manual intervention in model maintenance 
+This monitoring system is part of the OnSpot Predictive Model project and is subject to its licensing terms. 

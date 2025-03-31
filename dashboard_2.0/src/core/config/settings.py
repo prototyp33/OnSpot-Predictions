@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, Any
 import os
 from dotenv import load_dotenv
+from .supabase_config import SUPABASE_URL, SUPABASE_KEY, SUPABASE_SERVICE_KEY
 
 # Load environment variables
 load_dotenv()
@@ -25,7 +26,8 @@ DASHBOARD_SETTINGS = {
 
 # Database Settings
 DATABASE_SETTINGS = {
-    "url": os.getenv("DATABASE_URL", "sqlite:///./ml_monitoring.db"),
+    "supabase_url": SUPABASE_URL,
+    "supabase_key": SUPABASE_SERVICE_KEY or SUPABASE_KEY,
     "track_modifications": False,
 }
 
