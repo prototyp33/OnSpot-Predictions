@@ -1,5 +1,3 @@
-feature,importance
-temperature,0.3793561353239054
-wind_speed,0.3025555790088505
-humidity,0.2975994414261351
-precipitation,0.02048884424110906
+version https://git-lfs.github.com/spec/v1
+oid sha256:94855b78538b1e71f581ee3ed80e8275d4b9dc57eb997a00d2905d2371f57e5e
+size 142

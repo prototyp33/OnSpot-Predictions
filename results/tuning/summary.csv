@@ -1,6 +1,3 @@
-location_id,parking_type,rmse,r2,traffic_sensitivity,zone_influence,weather_impact,time_pattern,capacity_factor
-LOC_1,Public,33.05347196845022,-1.540129224060923,0.8,0.8,0.7,0.9,0.7
-LOC_2,Public,23.261286256494742,0.3717681694353493,0.2,0.8,0.7,0.7,0.7
-LOC_3,Public,32.25137527374776,-1.3739463837271972,0.8,0.8,0.7,0.9,0.7
-LOC_4,Resident,21.197976649629652,0.01419113111730419,0.8,0.8,0.7,0.9,0.7
-LOC_5,Public,22.145062005855895,0.39574472813159334,0.2,0.8,0.7,0.7,0.7
+version https://git-lfs.github.com/spec/v1
+oid sha256:1ace118876cd0bafe9b257c8d215ca3d31f56d8d9cbff42f74c91d6266821b7b
+size 470

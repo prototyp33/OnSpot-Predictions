@@ -1,9 +1,0 @@
-[submodule "onspot-monitoring-dashboard"]
-	path = onspot-monitoring-dashboard
-	url = https://github.com/prototyp33/OnSpot-Predictions.git
-	branch = Monitoring-Dashboard
-
-[submodule "frontend"]
-	path = frontend
-	url = https://github.com/prototyp33/OnSpot-Predictions.git
-	branch = main

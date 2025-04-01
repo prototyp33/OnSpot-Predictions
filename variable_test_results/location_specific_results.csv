@@ -1,6 +1,3 @@
-location,mse,rmse,r2,top_features
-LOC_2,98.93363513914635,9.946538852241334,0.885132689639962,"temperature, humidity, wind_speed, is_weekend_False, time_category_afternoon"
-LOC_5,110.23234127166238,10.499159074500318,0.8641762619913322,"day, wind_speed, humidity, temperature, is_weekend_False"
-LOC_4,118.03744941809795,10.864504103644029,0.7410453471640301,"day, is_weekend_True, wind_speed, day_of_week, weekday"
-LOC_1,131.33870085655,11.460309806307594,0.6946384458340624,"time_category_night, is_weekend_False, is_weekend_True, day_of_week, weekday"
-LOC_3,138.1547254865099,11.753923833618709,0.684688236920582,"day_of_week, time_category_afternoon, weekday, is_weekend_True, is_weekend_False"
+version https://git-lfs.github.com/spec/v1
+oid sha256:d1475d406b4a8ce063cf1b47163f490036158dfe913a2fb23df306c4125eaaa7
+size 698
