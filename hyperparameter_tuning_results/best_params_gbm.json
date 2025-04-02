@@ -1,0 +1,42 @@
+{
+    "LOC_1": {
+        "model__learning_rate": 0.03440764696895577,
+        "model__max_depth": 7,
+        "model__min_samples_leaf": 8,
+        "model__min_samples_split": 48,
+        "model__n_estimators": 134,
+        "model__subsample": 0.9637281608315128
+    },
+    "LOC_3": {
+        "model__learning_rate": 0.019333132642723086,
+        "model__max_depth": 6,
+        "model__min_samples_leaf": 16,
+        "model__min_samples_split": 16,
+        "model__n_estimators": 289,
+        "model__subsample": 0.6362425738131283
+    },
+    "LOC_5": {
+        "model__learning_rate": 0.061755996320003385,
+        "model__max_depth": 6,
+        "model__min_samples_leaf": 2,
+        "model__min_samples_split": 7,
+        "model__n_estimators": 665,
+        "model__subsample": 0.8186841117373118
+    },
+    "LOC_2": {
+        "model__learning_rate": 0.019333132642723086,
+        "model__max_depth": 6,
+        "model__min_samples_leaf": 16,
+        "model__min_samples_split": 16,
+        "model__n_estimators": 289,
+        "model__subsample": 0.6362425738131283
+    },
+    "LOC_4": {
+        "model__learning_rate": 0.019333132642723086,
+        "model__max_depth": 6,
+        "model__min_samples_leaf": 16,
+        "model__min_samples_split": 16,
+        "model__n_estimators": 289,
+        "model__subsample": 0.6362425738131283
+    }
+}

@@ -1,0 +1,22 @@
+=== MODEL PERFORMANCE SUMMARY ===
+
+Feature Set: standard
+Date: 2025-04-02 12:56:46
+
+GLOBAL MODEL:
+--------------
+LOCATION-SPECIFIC MODELS:
+------------------------
+Average RMSE: 11.4214
+Average R²: 0.7516
+Average MAE: 9.1342
+
+Top 3 best-performing locations:
+- Location LOC_5: R² = 0.8209, RMSE = 11.9601
+- Location LOC_2: R² = 0.8195, RMSE = 11.8414
+- Location LOC_4: R² = 0.7236, RMSE = 11.1242
+
+Top 3 worst-performing locations:
+- Location LOC_1: R² = 0.6943, RMSE = 10.5887
+- Location LOC_3: R² = 0.6999, RMSE = 11.5929
+- Location LOC_4: R² = 0.7236, RMSE = 11.1242

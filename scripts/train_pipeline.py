@@ -4,17 +4,42 @@ import pandas as pd
 import numpy as np
 import joblib
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import ColumnTransformer, StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.pipeline import Pipeline
+import logging
+import json
 
-def train_location_models_func(df, feature_set_name, output_dir):
-    """Train separate models for each location."""
-    logger.info(f"Training location-specific models with {feature_set_name}...")
+# Configure logging (assuming logger is configured elsewhere or add basic config)
+logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO) # Uncomment if basic config needed
+
+def train_location_models_func(df, feature_set_name, output_dir, best_params_path=None):
+    """Train separate models for each location using time-based split and potentially tuned hyperparameters."""
+    logger.info(f"Training location-specific models with {feature_set_name} features...")
     
+    # Load best hyperparameters if path is provided
+    all_best_params = {}
+    if best_params_path:
+        try:
+            with open(best_params_path, 'r') as f:
+                all_best_params = json.load(f)
+            logger.info(f"Successfully loaded best hyperparameters from {best_params_path}")
+        except FileNotFoundError:
+            logger.warning(f"Hyperparameter file not found: {best_params_path}. Using default parameters.")
+        except Exception as e:
+            logger.error(f"Error loading hyperparameters from {best_params_path}: {e}. Using default parameters.")
+
     # Check if location_id exists
     if 'location_id' not in df.columns:
         logger.warning("No location_id column found. Skipping location-specific models.")
+        return {}
+    
+    # Check if timestamp exists for sorting
+    if 'timestamp' not in df.columns:
+        logger.error("Timestamp column ('timestamp') not found. Cannot perform time-based split.")
         return {}
     
     # Get unique locations
@@ -24,21 +49,22 @@ def train_location_models_func(df, feature_set_name, output_dir):
     location_models = {}
     
     # Exclude non-feature columns
-    exclude_cols = ['timestamp', 'date', 'occupancy', 'location_id']
+    exclude_cols_final = ['timestamp', 'date', 'occupancy', 'location_id']
     
     for loc in locations:
         logger.info(f"Training model for location {loc}")
         
         # Filter data for this location
-        loc_df = df[df['location_id'] == loc]
+        loc_df = df[df['location_id'] == loc].copy()
+        loc_df.sort_values('timestamp', inplace=True)
         
         # Skip if not enough data
-        if len(loc_df) < 50:
+        if len(loc_df) < 50: # Minimum data check remains
             logger.warning(f"Skipping location {loc} - not enough data ({len(loc_df)} rows)")
             continue
         
-        # Prepare features and target
-        X = loc_df.drop(columns=[col for col in exclude_cols if col in loc_df.columns])
+        # Prepare features and target *after* sorting
+        X = loc_df.drop(columns=[col for col in exclude_cols_final if col in loc_df.columns])
         y = loc_df['occupancy']
         
         # Identify numeric and categorical columns
@@ -54,14 +80,40 @@ def train_location_models_func(df, feature_set_name, output_dir):
             remainder='drop'
         )
         
-        # Create pipeline with preprocessing and model
+        # --- Get Tuned Hyperparameters --- 
+        model_params = {'random_state': 42} # Start with default random_state
+        loc_str = str(loc) # Ensure location ID is string for JSON key lookup
+        if loc_str in all_best_params:
+            logger.info(f"Using tuned hyperparameters for location {loc}")
+            # Strip 'model__' prefix and update model_params
+            tuned_params = {k.replace('model__', ''): v for k, v in all_best_params[loc_str].items()}
+            model_params.update(tuned_params)
+        else:
+            logger.warning(f"No tuned hyperparameters found for location {loc}. Using defaults.")
+            # Use default GBR parameters (implicitly handled by constructor)
+            pass
+        # ----------------------------------
+        
+        # Create pipeline with preprocessing and model (using potentially tuned params)
         pipeline = Pipeline([
             ('preprocessor', preprocessor),
-            ('model', GradientBoostingRegressor(n_estimators=100, random_state=42))
+            ('model', GradientBoostingRegressor(**model_params)) # Instantiate with params
         ])
         
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # --- Time-based split ---
+        split_index = int(len(X) * 0.8) # 80% for training
+        
+        if split_index < 1 or split_index >= len(X):
+            logger.warning(f"Cannot create a valid train/test split for location {loc} with {len(X)} rows. Skipping.")
+            continue
+        
+        X_train = X.iloc[:split_index]
+        X_test = X.iloc[split_index:]
+        y_train = y.iloc[:split_index]
+        y_test = y.iloc[split_index:]
+        
+        logger.info(f"Location {loc}: Train size={len(X_train)}, Test size={len(X_test)}")
+        # ------------------------
         
         # Train model
         pipeline.fit(X_train, y_train)
@@ -141,21 +193,52 @@ if __name__ == "__main__":
     parser.add_argument("--output", default="trained_models", help="Output directory for trained models")
     parser.add_argument("--advanced", action="store_true", help="Use advanced features")
     parser.add_argument("--location_models", action="store_true", help="Train location-specific models")
-    
+    parser.add_argument("--params_file", default=None, help="Path to JSON file containing best hyperparameters")
+
     args = parser.parse_args()
-    
-    # Train models
-    results = train_models(
-        args.data, 
-        args.output, 
-        use_advanced_features=args.advanced, 
-        train_location_models=args.location_models
-    )
-    
-    # Create summary
+
+    # --- Modified execution logic ---
+    logger.info(f"Loading data from {args.data}")
+    try:
+        # Assuming timestamp needs parsing
+        df = pd.read_csv(args.data, parse_dates=['timestamp'])
+    except FileNotFoundError:
+        logger.error(f"Data file not found: {args.data}")
+        exit(1)
+    except Exception as e:
+        logger.error(f"Error loading data: {e}")
+        exit(1)
+
+    # Create output directory if it doesn't exist
+    os.makedirs(args.output, exist_ok=True)
+
+    # Determine feature set name (simple example)
+    feature_set_name = "advanced" if args.advanced else "standard"
+
+    location_models_results = {}
+    global_model_results = None # Placeholder for potential future global model
+
+    if args.location_models:
+        logger.info("Starting location-specific model training...")
+        location_models_results = train_location_models_func(
+            df,
+            feature_set_name,
+            args.output,
+            best_params_path=args.params_file
+        )
+        logger.info("Location-specific model training finished.")
+    else:
+        # Placeholder: Add logic for global model training if needed
+        logger.info("Location-specific training not requested. Add global model logic here if desired.")
+        # Example: global_model_results = train_global_model_func(df, feature_set_name, args.output)
+
+    # Create summary using the results we have
+    logger.info("Creating final summary...")
     create_model_summary(
-        results['global_model'],
-        results['location_models'],
-        results['feature_set'],
+        global_model_results, # Pass None if no global model trained
+        location_models_results,
+        feature_set_name, # Use the determined feature set name
         args.output
-    ) 
+    )
+    logger.info("Script finished successfully.")
+    # ----------------------------- 

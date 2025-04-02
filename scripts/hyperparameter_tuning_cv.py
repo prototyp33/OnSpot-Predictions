@@ -170,119 +170,140 @@ def tune_global_model(df, feature_set_name, n_splits=5, n_iter=50, model_type='g
 
 def tune_location_model(df, location_id, feature_set_name, n_splits=5, n_iter=50, model_type='gbm'):
     """Tune hyperparameters for a location-specific model using time series cross-validation."""
-    logger.info(f"Tuning hyperparameters for location {location_id} with {feature_set_name} features...")
-    
-    # Filter data for this location
+    logger.info(f"Tuning hyperparameters for location {location_id} with {feature_set_name} features using {model_type}...")
+
+    # Filter data for this location and sort by time
     loc_df = df[df['location_id'] == location_id].copy()
-    
-    # Skip if not enough data
-    if len(loc_df) < 100:  # Minimum threshold for reliable tuning
-        logger.warning(f"Skipping location {location_id} - not enough data ({len(loc_df)} rows)")
+    if 'timestamp' in loc_df.columns:
+        loc_df.sort_values('timestamp', inplace=True)
+    else:
+        logger.warning(f"Timestamp column not found for location {location_id}, cannot guarantee temporal order for TS-Split.")
+
+    # Skip if not enough data for the specified number of splits
+    if len(loc_df) < n_splits + 1: # TimeSeriesSplit requires at least n_splits + 1 samples
+        logger.warning(f"Skipping location {location_id} - not enough data ({len(loc_df)} rows) for {n_splits} splits.")
         return None
-    
+
     # Prepare features and target
-    exclude_cols = ['timestamp', 'date', 'occupancy', 'location_id']
+    exclude_cols = ['timestamp', 'date', 'occupancy', 'location_id'] # Ensure location_id is excluded
     X = loc_df.drop(columns=[col for col in exclude_cols if col in loc_df.columns])
     y = loc_df['occupancy']
-    
-    # Identify column types - make sure to exclude location_id
+
+    # Identify column types - IMPORTANT: Ensure this matches train_pipeline.py
     numeric_cols = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
     categorical_cols = X.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
-    
-    logger.info(f"Identified {len(numeric_cols)} numeric columns and {len(categorical_cols)} categorical columns")
-    logger.info(f"Categorical columns: {categorical_cols}")
-    
-    # Create preprocessing pipeline
+
+    logger.info(f"Location {location_id}: {len(numeric_cols)} numeric, {len(categorical_cols)} categorical features.")
+    if not numeric_cols and not categorical_cols:
+        logger.error(f"Location {location_id}: No features identified after exclusions. Skipping.")
+        return None
+
+    # Create preprocessing pipeline - MUST MATCH train_pipeline.py
     preprocessor = ColumnTransformer(
         transformers=[
             ('num', StandardScaler(), numeric_cols),
             ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)
         ],
-        remainder='drop'
+        remainder='drop' # Ensure this matches train_pipeline.py
     )
-    
+
     # Create base pipeline with preprocessing
     pipeline = Pipeline([
         ('preprocessor', preprocessor)
     ])
-    
+
     # Set up model and parameter grid based on model type
     if model_type == 'gbm':
-        pipeline.steps.append(('model', GradientBoostingRegressor()))
+        pipeline.steps.append(('model', GradientBoostingRegressor(random_state=42)))
+        # Updated parameter grid for GBM
         param_grid = {
-            'model__n_estimators': randint(50, 500),
-            'model__learning_rate': uniform(0.01, 0.3),
-            'model__max_depth': randint(3, 10),
-            'model__min_samples_split': randint(2, 20),
-            'model__min_samples_leaf': randint(1, 10),
-            'model__subsample': uniform(0.5, 0.5),  # 0.5 to 1.0
-            'model__max_features': ['sqrt', 'log2', None]
+            'model__n_estimators': randint(100, 1000),
+            'model__learning_rate': uniform(0.01, 0.2), # loc=0.01, scale=0.2
+            'model__max_depth': randint(3, 8),
+            'model__min_samples_split': randint(2, 50),
+            'model__min_samples_leaf': randint(1, 50),
+            'model__subsample': uniform(0.6, 0.4),  # loc=0.6, scale=0.4 (range 0.6 to 1.0)
+            # 'model__max_features': ['sqrt', 'log2', None] # Keep simple or use uniform(0.5, 0.5)
         }
     elif model_type == 'rf':
-        pipeline.steps.append(('model', RandomForestRegressor()))
+        pipeline.steps.append(('model', RandomForestRegressor(random_state=42)))
+        # Example grid for RandomForest (can be adjusted)
         param_grid = {
-            'model__n_estimators': randint(50, 500),
-            'model__max_depth': randint(3, 20),
-            'model__min_samples_split': randint(2, 20),
-            'model__min_samples_leaf': randint(1, 10),
-            'model__max_features': ['sqrt', 'log2', None],
-            'model__bootstrap': [True, False]
+            'model__n_estimators': randint(100, 1000),
+            'model__max_depth': randint(5, 30),
+            'model__min_samples_split': randint(2, 50),
+            'model__min_samples_leaf': randint(1, 50),
+            'model__max_features': ['sqrt', 'log2', None]
         }
     else:
-        logger.error(f"Unsupported model type: {model_type}")
+        logger.error(f"Unsupported model type: {model_type} for location {location_id}")
         return None
-    
+
     # Set up time series cross-validation
-    tscv = TimeSeriesSplit(n_splits=n_splits)
-    
-    # Create RMSE scorer (negative because RandomizedSearchCV maximizes score)
-    rmse_scorer = make_scorer(lambda y_true, y_pred: -np.sqrt(mean_squared_error(y_true, y_pred)))
-    
+    # Increase gap if needed, e.g., gap = prediction_horizon
+    tscv = TimeSeriesSplit(n_splits=n_splits, gap=0)
+
     # Set up randomized search
     random_search = RandomizedSearchCV(
         pipeline,
         param_distributions=param_grid,
         n_iter=n_iter,
         cv=tscv,
-        scoring=rmse_scorer,
+        scoring='r2', # Use R2 score (higher is better)
         n_jobs=-1,
-        verbose=2,
+        verbose=1, # Reduce verbosity a bit
         random_state=42,
-        return_train_score=True,
-        error_score=np.nan  # Return NaN for failed fits instead of raising error
+        return_train_score=True
     )
-    
-    # Fit the model
+
+    # Fit randomized search
+    logger.info(f"Starting hyperparameter search for location {location_id} ({n_iter} iterations)...")
     try:
         random_search.fit(X, y)
-        
-        # Get best parameters and score
-        best_params = random_search.best_params_
-        best_score = -random_search.best_score_  # Convert back to positive RMSE
-        
-        logger.info(f"Best RMSE for location {location_id}: {best_score:.4f}")
-        logger.info(f"Best parameters for location {location_id}: {best_params}")
-        
-        # Save best model
-        model_dir = os.path.join(output_dir, "location_models")
-        os.makedirs(model_dir, exist_ok=True)
-        model_path = os.path.join(model_dir, f"location_{location_id}_{model_type}_{feature_set_name}.pkl")
-        joblib.dump(random_search.best_estimator_, model_path)
-        logger.info(f"Best model for location {location_id} saved to {model_path}")
-        
-        # Visualize results
-        visualize_tuning_results(random_search, feature_set_name, model_type, f"location_{location_id}")
-        
-        return {
-            'best_params': best_params,
-            'best_score': best_score,
-            'best_estimator_path': model_path,
-            'cv_results': random_search.cv_results_
-        }
-    
     except Exception as e:
-        logger.error(f"Error tuning model for location {location_id}: {e}")
+        logger.error(f"RandomizedSearchCV failed for location {location_id}: {e}")
+        # Log feature names on error for debugging
+        logger.error(f"Features used: {X.columns.tolist()}")
+        logger.error(f"Numeric features: {numeric_cols}")
+        logger.error(f"Categorical features: {categorical_cols}")
         return None
+
+    # Get best parameters and score
+    best_params = random_search.best_params_
+    best_score = random_search.best_score_ # R2 score
+
+    logger.info(f"Location {location_id}: Best R² score = {best_score:.4f}")
+    logger.info(f"Location {location_id}: Best parameters = {best_params}")
+
+    # --- Optional: Refit best model on full location data (use with caution) ---
+    # logger.info(f"Refitting best model on full data for location {location_id}")
+    # best_model = random_search.best_estimator_
+    # best_model.fit(X, y) # This fits on the entire loc_df
+    # ----------------------------------------------------------------------------
+    best_model = random_search.best_estimator_ # Use the one fitted during search
+
+    # Save best model for this location
+    model_filename = f"location_{location_id}_{model_type}_{feature_set_name}_tuned.pkl"
+    model_path = os.path.join(output_dir, model_filename)
+    joblib.dump(best_model, model_path)
+    logger.info(f"Best model for location {location_id} saved to {model_path}")
+
+    # Save results
+    results_df = pd.DataFrame(random_search.cv_results_)
+    results_filename = f"location_{location_id}_{model_type}_{feature_set_name}_tuning_results.csv"
+    results_path = os.path.join(output_dir, results_filename)
+    results_df.to_csv(results_path, index=False)
+
+    # Visualize results
+    visualize_tuning_results(random_search, feature_set_name, model_type, f"location_{location_id}")
+
+    return {
+        'location_id': location_id,
+        'best_model_path': model_path,
+        'best_params': best_params,
+        'best_score': best_score, # R2 score
+        'cv_results_path': results_path
+    }
 
 def visualize_tuning_results(random_search, feature_set_name, model_type, model_scope):
     """Visualize hyperparameter tuning results."""
@@ -367,203 +388,135 @@ def visualize_tuning_results(random_search, feature_set_name, model_type, model_
             logger.warning(f"Could not create feature importance plot: {e}")
 
 def main(data_path, n_splits=5, n_iter=50, model_types=None, feature_sets=None, tune_location_models=True):
-    """Main function to run hyperparameter tuning."""
-    logger.info("Starting hyperparameter tuning...")
-    
-    # Set default model types and feature sets if not provided
+    """Main function to orchestrate hyperparameter tuning."""
+    logger.info("Starting hyperparameter tuning process...")
+
+    # Validate inputs
     if model_types is None:
-        model_types = ['gbm', 'rf']
-    
+        model_types = ['gbm'] # Default to GBM
     if feature_sets is None:
-        feature_sets = ['basic', 'advanced']
-    
+        feature_sets = ['standard'] # Assume a default feature set name if none provided
+
+    # Create overall results directory if not already done
+    os.makedirs(output_dir, exist_ok=True)
+
     # Load data
-    df = load_data(data_path)
-    
-    # Prepare feature sets
-    feature_dfs = {}
-    
-    if 'basic' in feature_sets:
-        feature_dfs['basic'] = df.copy()
-    
-    if 'advanced' in feature_sets:
-        logger.info("Generating advanced features...")
-        feature_dfs['advanced'] = engineer_advanced_features(df)
-        logger.info(f"Advanced features shape: {feature_dfs['advanced'].shape}")
-    
-    # Tune global models
-    global_results = {}
-    
-    for feature_set in feature_sets:
-        feature_df = feature_dfs[feature_set]
-        
-        for model_type in model_types:
-            logger.info(f"Tuning global {model_type} model with {feature_set} features...")
-            result = tune_global_model(feature_df, feature_set, n_splits, n_iter, model_type)
-            global_results[f"{model_type}_{feature_set}"] = result
-    
-    # Tune location-specific models if requested
-    location_results = {}
-    
-    if tune_location_models and 'location_id' in df.columns:
-        locations = df['location_id'].unique()
-        logger.info(f"Found {len(locations)} unique locations")
-        
-        for feature_set in feature_sets:
-            feature_df = feature_dfs[feature_set]
-            
+    try:
+        df = load_data(data_path)
+    except FileNotFoundError:
+        logger.error(f"Data file not found: {data_path}. Aborting.")
+        return
+    except Exception as e:
+        logger.error(f"Error loading data: {e}. Aborting.")
+        return
+
+    all_location_results = {}
+    all_best_params = {} # Dictionary to store best params per location/model
+
+    # --- Location-Specific Tuning ---
+    if tune_location_models:
+        if 'location_id' not in df.columns:
+            logger.error("Cannot perform location-specific tuning: 'location_id' column missing.")
+        else:
+            locations = df['location_id'].unique()
+            logger.info(f"Starting tuning for {len(locations)} locations.")
             for model_type in model_types:
-                location_results[f"{model_type}_{feature_set}"] = {}
-                
-                for location in locations:
-                    logger.info(f"Tuning {model_type} model for location {location} with {feature_set} features...")
-                    result = tune_location_model(feature_df, location, feature_set, n_splits, n_iter, model_type)
-                    
-                    if result is not None:
-                        location_results[f"{model_type}_{feature_set}"][location] = result
-    
-    # Create summary report
-    create_summary_report(global_results, location_results, output_dir)
-    
-    logger.info("Hyperparameter tuning completed successfully")
-    return global_results, location_results
+                all_best_params[model_type] = {} # Init dict for this model type
+                location_results_for_model = []
+                for loc_id in locations:
+                    # Assuming only one feature set for now
+                    feature_set_name = feature_sets[0]
+                    loc_result = tune_location_model(
+                        df,
+                        location_id=loc_id,
+                        feature_set_name=feature_set_name,
+                        n_splits=n_splits,
+                        n_iter=n_iter,
+                        model_type=model_type
+                    )
+                    if loc_result:
+                        location_results_for_model.append(loc_result)
+                        all_best_params[model_type][loc_id] = loc_result['best_params']
+
+                all_location_results[model_type] = location_results_for_model
+                logger.info(f"Finished tuning for {model_type} across all locations.")
+
+                # Save best parameters to JSON
+                best_params_path = os.path.join(output_dir, f"best_params_{model_type}.json")
+                try:
+                    import json
+                    with open(best_params_path, 'w') as f:
+                        json.dump(all_best_params[model_type], f, indent=4)
+                    logger.info(f"Best parameters for {model_type} saved to {best_params_path}")
+                except Exception as e:
+                    logger.error(f"Error saving best parameters to JSON: {e}")
+
+    else:
+        logger.info("Skipping location-specific model tuning as requested.")
+
+    # --- Global Model Tuning (Placeholder/Optional) ---
+    # global_results = {}
+    # for model_type in model_types:
+    #     for feature_set in feature_sets:
+    #         global_results[(model_type, feature_set)] = tune_global_model(
+    #             df, feature_set, n_splits, n_iter, model_type)
+
+    # --- Summary Report ---
+    # create_summary_report(global_results, all_location_results, output_dir)
+
+    logger.info("Hyperparameter tuning process finished.")
 
 def create_summary_report(global_results, location_results, output_dir):
-    """Create a summary report of hyperparameter tuning results."""
-    logger.info("Creating summary report...")
-    
-    summary_path = os.path.join(output_dir, "tuning_summary.txt")
-    
+    """Create a summary report of tuning results."""
+    summary_path = os.path.join(output_dir, "tuning_summary_report.txt")
+    logger.info(f"Creating summary report at {summary_path}")
+
     with open(summary_path, 'w') as f:
         f.write("=== HYPERPARAMETER TUNING SUMMARY ===\n\n")
-        f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        
-        f.write("GLOBAL MODELS:\n")
-        f.write("-------------\n\n")
-        
-        # Sort global models by performance
-        sorted_global = []
-        for model_key, results in global_results.items():
-            sorted_global.append((model_key, results))
-        
-        sorted_global = sorted(sorted_global, key=lambda x: x[1]['best_score'])
-        
-        for model_key, results in sorted_global:
-            model_type, feature_set = model_key.split('_', 1)
-            f.write(f"{model_type.upper()} with {feature_set.replace('_', ' ')} features:\n")
-            f.write(f"  RMSE: {results['best_score']:.4f}\n")
-            f.write("  Best parameters:\n")
-            
-            for param, value in results['best_params'].items():
-                f.write(f"    - {param}: {value}\n")
-            
-            f.write("\n")
-        
-        # Find best global model
-        best_global_key = sorted_global[0][0]
-        best_global_rmse = sorted_global[0][1]['best_score']
-        best_global_type, best_global_features = best_global_key.split('_', 1)
-        
-        f.write(f"Best global model: {best_global_type.upper()} with {best_global_features.replace('_', ' ')} features (RMSE: {best_global_rmse:.4f})\n\n")
-        
-        # Location-specific models
+        f.write(f"Report generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+
+        # Summarize location-specific results
         if location_results:
-            # Check if any location models were successfully tuned
-            any_successful_models = False
-            for model_key in location_results:
-                if location_results[model_key] and any(location_results[model_key].values()):
-                    any_successful_models = True
-                    break
-            
-            if any_successful_models:
-                f.write("LOCATION-SPECIFIC MODELS:\n")
-                f.write("------------------------\n\n")
-                
-                # Calculate average performance by model type and feature set
-                avg_performance = {}
-                
-                for model_key in location_results:
-                    if location_results[model_key]:  # Check if there are any results for this model type
-                        valid_results = [result for result in location_results[model_key].values() if result is not None]
-                        if valid_results:
-                            scores = [result['best_score'] for result in valid_results]
-                            avg_performance[model_key] = sum(scores) / len(scores)
-                
-                # Sort by average performance
-                sorted_loc_models = sorted(avg_performance.items(), key=lambda x: x[1])
-                
-                for model_key, avg_rmse in sorted_loc_models:
-                    model_type, feature_set = model_key.split('_', 1)
-                    f.write(f"{model_type.upper()} with {feature_set.replace('_', ' ')} features:\n")
-                    f.write(f"  Average RMSE: {avg_rmse:.4f}\n")
-                    
-                    # Get valid results for this model type
-                    valid_results = {loc: res for loc, res in location_results[model_key].items() if res is not None}
-                    
-                    if valid_results:
-                        # Best location for this model
-                        best_loc = min(valid_results.items(), key=lambda x: x[1]['best_score'])
-                        f.write(f"  Best location: {best_loc[0]} (RMSE: {best_loc[1]['best_score']:.4f})\n")
-                        
-                        # Worst location for this model
-                        worst_loc = max(valid_results.items(), key=lambda x: x[1]['best_score'])
-                        f.write(f"  Worst location: {worst_loc[0]} (RMSE: {worst_loc[1]['best_score']:.4f})\n\n")
-                
-                # Find best location-specific model
-                if sorted_loc_models:
-                    best_loc_model_key = sorted_loc_models[0][0]
-                    best_loc_avg_rmse = sorted_loc_models[0][1]
-                    best_loc_type, best_loc_features = best_loc_model_key.split('_', 1)
-                    
-                    f.write(f"Best location-specific model: {best_loc_type.upper()} with {best_loc_features.replace('_', ' ')} features (Avg RMSE: {best_loc_avg_rmse:.4f})\n\n")
-                
-                    # Overall recommendation
-                    f.write("RECOMMENDATION:\n")
-                    f.write("--------------\n\n")
-                    
-                    if best_loc_avg_rmse < best_global_rmse:
-                        improvement = (best_global_rmse - best_loc_avg_rmse) / best_global_rmse * 100
-                        
-                        f.write(f"Use location-specific {best_loc_type.upper()} models with {best_loc_features.replace('_', ' ')} features.\n")
-                        f.write(f"This approach provides {improvement:.1f}% better performance than the best global model.\n")
-                    else:
-                        f.write(f"Use a global {best_global_type.upper()} model with {best_global_features.replace('_', ' ')} features.\n")
-                        f.write("Location-specific models do not provide significant improvement over the global model.\n")
-            else:
-                f.write("LOCATION-SPECIFIC MODELS:\n")
-                f.write("------------------------\n\n")
-                f.write("No successful location-specific models were tuned.\n\n")
-                
-                f.write("RECOMMENDATION:\n")
-                f.write("--------------\n\n")
-                f.write(f"Use a global {best_global_type.upper()} model with {best_global_features.replace('_', ' ')} features.\n")
-        else:
-            f.write("LOCATION-SPECIFIC MODELS:\n")
-            f.write("------------------------\n\n")
-            f.write("Location-specific models were not evaluated.\n\n")
-            
-            f.write("RECOMMENDATION:\n")
-            f.write("--------------\n\n")
-            f.write(f"Use a global {best_global_type.upper()} model with {best_global_features.replace('_', ' ')} features.\n")
-    
-    logger.info(f"Summary report saved to {summary_path}")
+            f.write("Location-Specific Model Tuning Results:\n")
+            f.write("-------------------------------------\n")
+            for model_type, results_list in location_results.items():
+                f.write(f"Model Type: {model_type.upper()}\n")
+                if not results_list:
+                    f.write("- No successful tuning runs.\n")
+                    continue
+
+                avg_score = np.mean([r['best_score'] for r in results_list])
+                f.write(f"- Average Best Score (R²): {avg_score:.4f}\n")
+                f.write("  Best Parameters per Location (example):\n")
+                # Show params for the best performing location
+                best_loc = max(results_list, key=lambda x: x['best_score'])
+                f.write(f"  - Location {best_loc['location_id']}: Score={best_loc['best_score']:.4f}\n")
+                params_str = "\n".join([f"      {k}: {v}" for k, v in best_loc['best_params'].items()])
+                f.write(f"{params_str}\n")
+            f.write("\n")
+
+        # Summarize global results (if implemented)
+        # ... (add similar summary for global_results if needed)
+
+    logger.info("Summary report created.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Tune hyperparameters for parking occupancy prediction models")
-    parser.add_argument("--data", default="data/prepared_data_improved.csv", help="Path to the prepared data file")
-    parser.add_argument("--n_splits", type=int, default=5, help="Number of cross-validation splits")
-    parser.add_argument("--n_iter", type=int, default=50, help="Number of parameter settings to try")
-    parser.add_argument("--model_types", nargs='+', choices=['gbm', 'rf'], default=['gbm', 'rf'], help="Model types to tune")
-    parser.add_argument("--feature_sets", nargs='+', choices=['basic', 'advanced'], default=['basic', 'advanced'], help="Feature sets to use")
-    parser.add_argument("--global_only", action="store_true", help="Only tune global models")
-    
+    parser = argparse.ArgumentParser(description="Hyperparameter tuning for parking occupancy models.")
+    parser.add_argument("--data", required=True, help="Path to the prepared data file (CSV).")
+    parser.add_argument("--n_splits", type=int, default=5, help="Number of splits for TimeSeriesSplit.")
+    parser.add_argument("--n_iter", type=int, default=50, help="Number of iterations for RandomizedSearchCV.")
+    parser.add_argument("--model_types", nargs='+', default=['gbm'], help="Model types to tune (e.g., gbm rf).")
+    # parser.add_argument("--feature_sets", nargs='+', default=['standard'], help="Feature set names used.") # Simplified for now
+    parser.add_argument("--skip_location_tuning", action="store_true", help="Skip tuning location-specific models.")
+
     args = parser.parse_args()
-    
+
     main(
-        args.data, 
-        args.n_splits, 
-        args.n_iter, 
-        args.model_types, 
-        args.feature_sets, 
-        not args.global_only
+        data_path=args.data,
+        n_splits=args.n_splits,
+        n_iter=args.n_iter,
+        model_types=args.model_types,
+        # feature_sets=args.feature_sets, # Simplified for now
+        feature_sets=['standard'], # Hardcode default name for simplicity
+        tune_location_models=(not args.skip_location_tuning)
     )
