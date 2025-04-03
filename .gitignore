@@ -335,3 +335,14 @@ terraform/.terraform/
 .terraform/
 *.tfstate
 *.tfstate.backup
+# Large data files
+data/splits/*.csv
+data/*/splits/*.csv
+notebooks/output/*.csv
+*.pkl
+*.joblib
+*.hdf5
+*.parquet
+# Large binary files
+*.zip
+*.tar.gz
