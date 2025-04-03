@@ -325,3 +325,13 @@ validation_results.json
 act-artifacts/
 act-secrets.env
 terraform/.terraform/
+# Large data files
+data/splits/*.csv
+data/*/splits/*.csv
+*.csv
+
+# Terraform
+terraform/.terraform/
+.terraform/
+*.tfstate
+*.tfstate.backup
