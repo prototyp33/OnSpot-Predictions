@@ -173,6 +173,21 @@ def main(
         test_ratio=test_ratio
     )
     
+    # --- Explicitly fit preprocessor on training data before saving ---
+    logger.info("Fitting preprocessor on training data...")
+    try:
+        # Separate features (X_train) from the target (y_train) for fitting
+        X_train = train_df[numerical_cols + categorical_cols]
+        # y_train = train_df['occupancy'] # Target not needed for fitting preprocessor
+        preprocessor.fit(X_train) 
+        logger.info("Preprocessor fitted successfully.")
+    except Exception as e:
+        logger.error(f"Error fitting preprocessor: {e}")
+        # Decide whether to proceed without saving preprocessor or raise error
+        preprocessor = None # Ensure we don't save an unfitted/broken preprocessor
+        logger.warning("Proceeding without saving the preprocessor due to fitting error.")
+    # --- End explicit fit ---
+    
     # Save the splits and preprocessor
     save_splits(train_df, val_df, test_df, output_dir, preprocessor)
     

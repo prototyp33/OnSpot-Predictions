@@ -4,19 +4,16 @@
 *.feather filter=lfs diff=lfs merge=lfs -text
 *.h5 filter=lfs diff=lfs merge=lfs -text
 *.hdf5 filter=lfs diff=lfs merge=lfs -text
-
 # Model files
 *.pkl filter=lfs diff=lfs merge=lfs -text
 *.model filter=lfs diff=lfs merge=lfs -text
 *.joblib filter=lfs diff=lfs merge=lfs -text
 *.pt filter=lfs diff=lfs merge=lfs -text
 *.pth filter=lfs diff=lfs merge=lfs -text
-
 # Archive files
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.tar.gz filter=lfs diff=lfs merge=lfs -text
 *.tgz filter=lfs diff=lfs merge=lfs -text
-
 # Keep these files in regular Git
 *.py text diff=python
 *.md text diff=markdown
@@ -24,3 +21,5 @@
 *.yaml text
 *.json text
 *.txt text 
+data/splits/*.csv filter=lfs diff=lfs merge=lfs -text
+terraform/.terraform/** filter=lfs diff=lfs merge=lfs -text

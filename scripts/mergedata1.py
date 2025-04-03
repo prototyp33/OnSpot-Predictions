@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
 
 # Constants
 PROXIMITY_THRESHOLD_METERS = 100
-REQUIRED_SIU_COLUMNS = ['lat', 'lon']
+# --- Allow either 'lat'/'lon' or 'latitude'/'longitude' --- 
+# REQUIRED_SIU_COLUMNS = ['lat', 'lon'] # Original
+POSSIBLE_LAT_COLS = ['lat', 'latitude']
+POSSIBLE_LON_COLS = ['lon', 'longitude']
+# --- End change ---
 EARTH_RADIUS_METERS = 6371000
 DEFAULT_LEAF_SIZE = 30
 
@@ -113,6 +117,16 @@ def fetch_barcelona_parking_data():
         
         # Add additional parking information
         df['parking_type'] = df.get('tipus_estacionament', 'Unknown')
+        
+        # --- Log raw 'places' data for debugging capacity issues ---
+        if 'places' in df.columns:
+            logger.info("Raw 'places' column value counts before conversion:")
+            logger.info(df['places'].value_counts(dropna=False).head(10)) # Log top 10 values + NaNs
+            logger.info(f"Data type of 'places' column: {df['places'].dtype}")
+        else:
+            logger.warning("'places' column not found in fetched Barcelona data!")
+        # --- End logging ---
+
         df['capacity'] = pd.to_numeric(df['places'] if 'places' in df.columns else pd.Series([0] * len(df)), errors='coerce').fillna(0)
         df['name'] = df.get('nom', 'Unknown')
         
@@ -139,6 +153,12 @@ def merge_datasets(bsm_data: pd.DataFrame, siu_data: pd.DataFrame, proximity_thr
     """
     logger.info("Starting matching process...")
     
+    # Ensure SIU data uses 'lat', 'lon' for consistency
+    if 'latitude' in siu_data.columns and 'lat' not in siu_data.columns:
+        siu_data = siu_data.rename(columns={'latitude': 'lat'})
+    if 'longitude' in siu_data.columns and 'lon' not in siu_data.columns:
+        siu_data = siu_data.rename(columns={'longitude': 'lon'})
+        
     # Convert coordinates to radians
     bsm_coords = np.radians(bsm_data[['lat', 'lon']].values)
     siu_coords = np.radians(siu_data[['lat', 'lon']].values)
@@ -220,18 +240,40 @@ def main():
         logger.info("Loading SIU data...")
         siu_data = pd.read_csv(args.siu_path)
         
-        # Validate SIU data
-        missing_cols = [col for col in REQUIRED_SIU_COLUMNS if col not in siu_data.columns]
+        # --- Validate SIU data (flexible column names) ---
+        lat_col = next((col for col in POSSIBLE_LAT_COLS if col in siu_data.columns), None)
+        lon_col = next((col for col in POSSIBLE_LON_COLS if col in siu_data.columns), None)
+        
+        missing_cols = []
+        if not lat_col:
+            missing_cols.append(f"one of {POSSIBLE_LAT_COLS}")
+        if not lon_col:
+            missing_cols.append(f"one of {POSSIBLE_LON_COLS}")
+        
+        # Original check:
+        # missing_cols = [col for col in REQUIRED_SIU_COLUMNS if col not in siu_data.columns]
+        # --- End validation change ---
         if missing_cols:
             raise ValueError(f"Missing required columns in SIU data: {missing_cols}")
         
-        # Convert SIU coordinates to numeric
-        for col in ['lat', 'lon']:
-            siu_data[col] = pd.to_numeric(siu_data[col], errors='coerce')
+        # --- Convert SIU coordinates to numeric using identified columns ---
+        siu_data[lat_col] = pd.to_numeric(siu_data[lat_col], errors='coerce')
+        siu_data[lon_col] = pd.to_numeric(siu_data[lon_col], errors='coerce')
+        # Original conversion:
+        # for col in ['lat', 'lon']:
+        #     siu_data[col] = pd.to_numeric(siu_data[col], errors='coerce')
+        # --- End conversion change ---
         
         # Drop invalid coordinates
-        siu_data = siu_data.dropna(subset=['lat', 'lon'])
+        siu_data = siu_data.dropna(subset=[lat_col, lon_col])
         
+        # --- Rename columns to lat/lon for consistency downstream --- 
+        if lat_col != 'lat':
+            siu_data = siu_data.rename(columns={lat_col: 'lat'})
+        if lon_col != 'lon':
+            siu_data = siu_data.rename(columns={lon_col: 'lon'})
+        # --- End rename ---
+            
         # Fetch Barcelona parking data
         bsm_data = fetch_barcelona_parking_data()
         

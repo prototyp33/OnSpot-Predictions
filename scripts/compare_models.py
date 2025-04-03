@@ -14,11 +14,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
-import xgboost as xgb
-import lightgbm as lgb
-import catboost as cb
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 import os
 import logging
@@ -27,6 +25,7 @@ from datetime import datetime
 import joblib
 import json
 import time
+from typing import Tuple, List, Dict, Any
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, 
@@ -37,85 +36,120 @@ logger = logging.getLogger(__name__)
 output_dir = "model_comparison_results"
 os.makedirs(output_dir, exist_ok=True)
 
-def load_data(file_path):
-    """Load and prepare the dataset for model comparison."""
-    logger.info(f"Loading data from {file_path}...")
-    df = pd.read_csv(file_path)
-    
-    # Convert timestamp to datetime
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    
-    # Extract time components
-    df['hour'] = df['timestamp'].dt.hour
-    df['day_of_week'] = df['timestamp'].dt.dayofweek
-    df['month'] = df['timestamp'].dt.month
-    df['is_weekend'] = df['day_of_week'] >= 5
-    df['day_of_year'] = df['timestamp'].dt.dayofyear
-    df['week_of_year'] = df['timestamp'].dt.isocalendar().week
-    
-    # Create cyclical features for time
-    df['hour_sin'] = np.sin(2 * np.pi * df['hour']/24)
-    df['hour_cos'] = np.cos(2 * np.pi * df['hour']/24)
-    df['day_sin'] = np.sin(2 * np.pi * df['day_of_week']/7)
-    df['day_cos'] = np.cos(2 * np.pi * df['day_of_week']/7)
-    df['month_sin'] = np.sin(2 * np.pi * df['month']/12)
-    df['month_cos'] = np.cos(2 * np.pi * df['month']/12)
-    
-    logger.info(f"Dataset loaded with shape: {df.shape}")
-    return df
+def load_split_data(data_dir: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, ColumnTransformer, List[str], List[str]]:
+    """Load train, validation, test splits and the preprocessor."""
+    logger.info(f"Loading data splits and preprocessor from {data_dir}...")
+    try:
+        train_df = pd.read_csv(os.path.join(data_dir, 'train.csv'))
+        val_df = pd.read_csv(os.path.join(data_dir, 'validation.csv'))
+        test_df = pd.read_csv(os.path.join(data_dir, 'test.csv'))
+        preprocessor = joblib.load(os.path.join(data_dir, 'preprocessor.pkl'))
+        logger.info("Data splits and preprocessor loaded successfully.")
 
-def identify_variable_types(df):
-    """Identify numerical and categorical variables in the dataset."""
-    # Exclude target variable and timestamp
-    exclude_cols = ['occupancy', 'timestamp', 'date']
-    
-    # Identify numerical and categorical columns
-    numerical_cols = []
-    categorical_cols = []
-    
-    for col in df.columns:
-        if col in exclude_cols:
-            continue
+        # Infer numerical and categorical columns from the preprocessor
+        numerical_cols = []
+        categorical_cols = []
         
-        if np.issubdtype(df[col].dtype, np.number):
-            numerical_cols.append(col)
+        # Check if preprocessor has transformers attribute
+        if hasattr(preprocessor, 'transformers_'):
+             for name, transformer, features in preprocessor.transformers_:
+                 if name == 'num' and isinstance(transformer, StandardScaler):
+                     numerical_cols.extend(features)
+                 elif name == 'cat' and isinstance(transformer, OneHotEncoder):
+                     categorical_cols.extend(features)
         else:
-            categorical_cols.append(col)
-    
-    logger.info(f"Identified {len(numerical_cols)} numerical variables: {numerical_cols}")
-    logger.info(f"Identified {len(categorical_cols)} categorical variables: {categorical_cols}")
-    
-    return numerical_cols, categorical_cols
+             logger.warning("Could not automatically infer feature names from preprocessor. Manual definition might be needed.")
+             # Fallback or raise error if needed - for now, let it proceed maybe empty
 
-def prepare_data_for_models(df, numerical_cols, categorical_cols, test_size=0.2):
-    """Prepare data for model training and evaluation."""
-    # Target variable
-    y = df['occupancy']
+        logger.info(f"Inferred Numerical Columns: {numerical_cols}")
+        logger.info(f"Inferred Categorical Columns: {categorical_cols}")
+
+        # Convert timestamp columns if they exist after loading
+        for df in [train_df, val_df, test_df]:
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+
+        return train_df, val_df, test_df, preprocessor, numerical_cols, categorical_cols
+
+    except FileNotFoundError as e:
+        logger.error(f"Error loading files from {data_dir}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during data loading: {e}")
+        raise
+
+def prepare_data_for_models(
+    train_df: pd.DataFrame, 
+    val_df: pd.DataFrame, 
+    test_df: pd.DataFrame, 
+    preprocessor: ColumnTransformer, 
+    numerical_cols: List[str], 
+    categorical_cols: List[str],
+    target_col: str = 'occupancy' # Define target column
+) -> Tuple[Any, Any, Any, pd.Series, pd.Series, pd.Series]:
+    """Prepare data using the loaded preprocessor."""
+    logger.info("Applying loaded preprocessor to data splits...")
     
-    # Features
-    X = df[numerical_cols + categorical_cols]
+    feature_cols = numerical_cols + categorical_cols
     
-    # Create preprocessing pipeline
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', StandardScaler(), numerical_cols),
-            ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_cols)
-        ]
-    )
+    # Ensure feature columns exist in all dataframes
+    for df_name, df in zip(['Train', 'Validation', 'Test'], [train_df, val_df, test_df]):
+        missing_features = [col for col in feature_cols if col not in df.columns]
+        if missing_features:
+            raise ValueError(f"Missing required feature columns in {df_name} data: {missing_features}")
+        missing_target = target_col not in df.columns
+        if missing_target:
+             raise ValueError(f"Missing target column '{target_col}' in {df_name} data.")
+
+
+    # Separate features and target
+    y_train = train_df[target_col]
+    X_train = train_df[feature_cols]
     
-    # Split data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-    
-    # Preprocess data
-    X_train_processed = preprocessor.fit_transform(X_train)
-    X_test_processed = preprocessor.transform(X_test)
-    
-    return X_train, X_test, y_train, y_test, X_train_processed, X_test_processed, preprocessor
+    y_val = val_df[target_col]
+    X_val = val_df[feature_cols]
+
+    y_test = test_df[target_col]
+    X_test = test_df[feature_cols]
+
+    # Apply the *loaded* preprocessor (transform only)
+    # Handle potential errors during transform
+    try:
+        X_train_processed = preprocessor.transform(X_train)
+        logger.info(f"Training data processed shape: {X_train_processed.shape}")
+    except Exception as e:
+        logger.error(f"Error transforming training data: {e}")
+        logger.error(f"Preprocessor features: {preprocessor.feature_names_in_}")
+        logger.error(f"Input train features: {X_train.columns.tolist()}")
+        raise
+        
+    try:
+        X_val_processed = preprocessor.transform(X_val)
+        logger.info(f"Validation data processed shape: {X_val_processed.shape}")
+    except Exception as e:
+        logger.error(f"Error transforming validation data: {e}")
+        raise
+        
+    try:
+        X_test_processed = preprocessor.transform(X_test)
+        logger.info(f"Test data processed shape: {X_test_processed.shape}")
+    except Exception as e:
+        logger.error(f"Error transforming test data: {e}")
+        raise
+
+    logger.info("Data preprocessing complete using loaded preprocessor.")
+    return X_train_processed, X_val_processed, X_test_processed, y_train, y_val, y_test
 
 def prepare_time_series_data(df, numerical_cols, categorical_cols, sequence_length=24):
     """Prepare time series data for LSTM models."""
     # Sort by timestamp
     df = df.sort_values('timestamp')
+    
+    # --- This part assumes access to the original columns before one-hot encoding ---
+    # --- It also uses the raw numerical columns before scaling. Needs rework ---
+    # --- For now, this function is incompatible with the new flow ---
+    logger.warning("prepare_time_series_data is not adapted for pre-split/preprocessed data yet.")
     
     # Group by location_id if it exists
     if 'location_id' in df.columns:
@@ -123,12 +157,17 @@ def prepare_time_series_data(df, numerical_cols, categorical_cols, sequence_leng
         X_sequences = []
         y_values = []
         
+        # Placeholder for scaled numerical features - requires preprocessor to be fitted
+        # scaler = StandardScaler()
+        # df[numerical_cols] = scaler.fit_transform(df[numerical_cols]) 
+
         for location in locations:
             loc_df = df[df['location_id'] == location].copy()
             
             # Create sequences
             for i in range(len(loc_df) - sequence_length):
-                X_seq = loc_df.iloc[i:i+sequence_length][numerical_cols].values
+                # --- This needs scaled data ---
+                X_seq = loc_df.iloc[i:i+sequence_length][numerical_cols].values 
                 y_val = loc_df.iloc[i+sequence_length]['occupancy']
                 X_sequences.append(X_seq)
                 y_values.append(y_val)
@@ -149,7 +188,7 @@ def prepare_time_series_data(df, numerical_cols, categorical_cols, sequence_leng
         X_sequences = np.array(X_sequences)
         y_values = np.array(y_values)
     
-    # Split data
+    # Split data (using simple split here, might need time-series split)
     X_train, X_test, y_train, y_test = train_test_split(X_sequences, y_values, test_size=0.2, random_state=42)
     
     return X_train, X_test, y_train, y_test
@@ -160,9 +199,8 @@ def train_and_evaluate_models(X_train, X_test, y_train, y_test, X_train_processe
         'Linear Regression': LinearRegression(),
         'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42),
         'Gradient Boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
-        'XGBoost': xgb.XGBRegressor(n_estimators=100, random_state=42),
-        'LightGBM': lgb.LGBMRegressor(n_estimators=100, random_state=42),
-        'CatBoost': cb.CatBoostRegressor(n_estimators=100, random_state=42, verbose=0)
+        # "SVR": SVR(), # SVR can be slow, uncomment if needed
+        # "KNN": KNeighborsRegressor() # KNN can be memory intensive
     }
     
     results = []
@@ -388,73 +426,163 @@ def train_ensemble_model(X_train, X_test, y_train, y_test, X_train_processed, X_
     
     return result
 
-def main(data_path):
-    """Main function to run the model comparison."""
-    logger.info("Starting model comparison...")
+def evaluate_model(name, model, X_test, y_test):
+    """Evaluate a model and return performance metrics."""
+    start_time = datetime.now()
+    y_pred = model.predict(X_test)
+    end_time = datetime.now()
     
-    # Load data
-    df = load_data(data_path)
+    mse = mean_squared_error(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    inference_time = (end_time - start_time).total_seconds()
     
-    # Identify variable types
-    numerical_cols, categorical_cols = identify_variable_types(df)
+    logger.info(f"{name} Evaluation:")
+    logger.info(f"  MSE: {mse:.4f}")
+    logger.info(f"  MAE: {mae:.4f}")
+    logger.info(f"  R2 Score: {r2:.4f}")
+    logger.info(f"  Inference Time: {inference_time:.4f} seconds")
     
-    # Prepare data for traditional models
-    X_train, X_test, y_train, y_test, X_train_processed, X_test_processed, preprocessor = prepare_data_for_models(
-        df, numerical_cols, categorical_cols
-    )
+    return {'MSE': mse, 'MAE': mae, 'R2': r2, 'InferenceTime': inference_time}
+
+def main(data_dir: str, run_lstm: bool = False):
+    """Main function to load data, prepare, train, and compare models."""
     
-    # Train and evaluate traditional models
-    results_df = train_and_evaluate_models(
-        X_train, X_test, y_train, y_test, X_train_processed, X_test_processed
-    )
-    
-    # Prepare data for LSTM
+    # Load the pre-split data and preprocessor
     try:
-        X_train_lstm, X_test_lstm, y_train_lstm, y_test_lstm = prepare_time_series_data(
-            df, numerical_cols, categorical_cols
-        )
-        
-        # Train and evaluate LSTM
-        lstm_result = train_lstm_model(X_train_lstm, X_test_lstm, y_train_lstm, y_test_lstm)
-        
-        # Add LSTM result to results_df
-        results_df = pd.concat([results_df, pd.DataFrame([lstm_result])], ignore_index=True)
+        train_df, val_df, test_df, preprocessor, numerical_cols, categorical_cols = load_split_data(data_dir)
     except Exception as e:
-        logger.warning(f"Could not train LSTM model: {e}")
-    
-    # Train ensemble model
-    ensemble_result = train_ensemble_model(
-        X_train, X_test, y_train, y_test, X_train_processed, X_test_processed, results_df
-    )
-    
-    # Add ensemble result to results_df
-    results_df = pd.concat([results_df, pd.DataFrame([ensemble_result])], ignore_index=True)
-    
-    # Sort by R²
-    results_df = results_df.sort_values('r2', ascending=False)
-    
-    # Save final results
-    results_df.to_csv(os.path.join(output_dir, 'final_model_comparison_results.csv'), index=False)
-    
-    # Create summary report
-    with open(os.path.join(output_dir, 'model_comparison_summary.txt'), 'w') as f:
-        f.write("=== MODEL COMPARISON SUMMARY ===\n\n")
+        logger.error(f"Failed to load data. Exiting. Error: {e}")
+        return
+
+    # Prepare data using the loaded preprocessor
+    try:
+        X_train_proc, X_val_proc, X_test_proc, y_train, y_val, y_test = prepare_data_for_models(
+            train_df, val_df, test_df, preprocessor, numerical_cols, categorical_cols
+        )
+    except Exception as e:
+         logger.error(f"Failed during data preparation with loaded preprocessor. Exiting. Error: {e}")
+         return
+
+    # --- Define Models (Keep as is) ---
+    models = {
+        "Linear Regression": LinearRegression(),
+        "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
+        "Gradient Boosting": GradientBoostingRegressor(n_estimators=100, random_state=42),
+        # "SVR": SVR(), # SVR can be slow, uncomment if needed
+        # "KNN": KNeighborsRegressor() # KNN can be memory intensive
+    }
+
+    results = {}
+
+    # Train and evaluate standard models
+    for name, model in models.items():
+        logger.info(f"--- Training {name} ---")
+        start_time = datetime.now()
+        # Use preprocessed training data
+        model.fit(X_train_proc, y_train) 
+        end_time = datetime.now()
+        training_time = (end_time - start_time).total_seconds()
+        logger.info(f"{name} Training Time: {training_time:.4f} seconds")
         
-        f.write("Model Performance (sorted by R²):\n")
-        for _, row in results_df.iterrows():
-            f.write(f"- {row['model']}: R² = {row['r2']:.4f}, RMSE = {row['rmse']:.4f}, MAE = {row['mae']:.4f}, Training Time = {row['training_time']:.2f}s\n")
+        # Evaluate on preprocessed test data
+        results[name] = evaluate_model(name, model, X_test_proc, y_test)
+        results[name]['TrainingTime'] = training_time
+
+    # --- LSTM Handling ---
+    if run_lstm:
+        logger.info("--- Preparing Data for LSTM ---")
+        # --- !! IMPORTANT !! ---
+        # The prepare_time_series_data function needs adaptation to work correctly
+        # with the pre-split/preprocessed data flow. 
+        # It currently re-reads the original columns and splits again.
+        # Running it now will likely fail or use improperly processed data.
+        # We need the *original* train/val/test dataframes here *before* one-hot encoding, 
+        # but *after* scaling numerical features appropriately based on the training set.
+        # This requires more significant changes to the workflow.
+        # For now, we demonstrate the structure but acknowledge the incompatibility.
         
-        f.write("\nBest Model: " + results_df.iloc[0]['model'] + "\n")
+        # Ideally, we'd adapt prepare_time_series_data or create a new function
+        # that takes train_df, val_df, test_df (with original features + scaled numerical)
+        # and creates sequences.
         
-        if 'components' in results_df.columns and not pd.isna(results_df.iloc[0].get('components', None)):
-            f.write(f"Ensemble Components: {results_df.iloc[0]['components']}\n")
-    
-    logger.info(f"Model comparison completed. Results saved to {output_dir}")
-    logger.info(f"Best model: {results_df.iloc[0]['model']} with R² = {results_df.iloc[0]['r2']:.4f}")
+        logger.warning("LSTM preparation and training is using an unadapted function and may not work correctly with the pre-split workflow.")
+        
+        # Using train_df as a placeholder input - THIS IS INCORRECT for the intended workflow
+        # It needs the full dataset before splitting to do sequence generation across the whole timeline.
+        # Or, adapt sequence generation to work within the pre-defined splits.
+        # X_lstm_train, X_lstm_test, y_lstm_train, y_lstm_test = prepare_time_series_data(
+        #     pd.concat([train_df, val_df, test_df]), # Hacky concatenation - loses split integrity
+        #     numerical_cols, 
+        #     categorical_cols, 
+        #     sequence_length=24 
+        # )
+        
+        # --- Placeholder: Skip LSTM training for now due to incompatibility ---
+        logger.error("Skipping LSTM training due to incompatible data preparation function.")
+        # if X_lstm_train.size > 0: # Check if data prep returned something
+        #     logger.info("--- Training LSTM ---")
+        #     input_shape = (X_lstm_train.shape[1], X_lstm_train.shape[2])
+        #     lstm_model = build_lstm_model(input_shape)
+        #     
+        #     early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        #     
+        #     start_time = datetime.now()
+        #     history = lstm_model.fit(
+        #         X_lstm_train, y_lstm_train,
+        #         epochs=50, # Adjust epochs
+        #         batch_size=32, # Adjust batch size
+        #         validation_split=0.2, # Use portion of training data for validation during training
+        #         callbacks=[early_stopping],
+        #         verbose=1
+        #     )
+        #     end_time = datetime.now()
+        #     training_time = (end_time - start_time).total_seconds()
+        #     logger.info(f"LSTM Training Time: {training_time:.4f} seconds")
+            
+        #     results["LSTM"] = evaluate_model("LSTM", lstm_model, X_lstm_test, y_lstm_test)
+        #     results["LSTM"]['TrainingTime'] = training_time
+        # else:
+        #     logger.warning("LSTM data preparation yielded no sequences. Skipping LSTM.")
+
+    # --- Results Analysis (Keep as is) ---
+    results_df = pd.DataFrame(results).T.sort_values(by='R2', ascending=False)
+    logger.info("\\n--- Model Comparison Results ---")
+    logger.info(results_df)
+
+    # Save results
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results_file = os.path.join(output_dir, f"model_comparison_{timestamp}.csv")
+    results_df.to_csv(results_file)
+    logger.info(f"Comparison results saved to {results_file}")
+
+    # Plotting (optional)
+    try:
+        results_df[['R2', 'MAE', 'MSE']].plot(kind='bar', secondary_y=['MAE', 'MSE'], figsize=(12, 6))
+        plt.title('Model Comparison Metrics')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plot_file = os.path.join(output_dir, f"model_metrics_{timestamp}.png")
+        plt.savefig(plot_file)
+        logger.info(f"Metrics plot saved to {plot_file}")
+        # plt.show() # Uncomment to display plot interactively
+    except Exception as e:
+        logger.warning(f"Could not generate plot: {e}")
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Compare different machine learning models for parking occupancy prediction")
-    parser.add_argument("--data", default="data/prepared_data_improved.csv", help="Path to the prepared data file")
+    parser = argparse.ArgumentParser(description="Compare performance of various regression models on pre-split parking data.")
+    parser.add_argument(
+        "--data-dir", 
+        type=str, 
+        required=True, 
+        help="Directory containing train.csv, validation.csv, test.csv, and preprocessor.pkl"
+    )
+    parser.add_argument(
+        "--run-lstm",
+        action='store_true', # Makes it a flag, presence means True
+        help="Include LSTM model in comparison (Note: Data prep might be incompatible)."
+    )
     
     args = parser.parse_args()
-    main(args.data) 
+    main(data_dir=args.data_dir, run_lstm=args.run_lstm) 

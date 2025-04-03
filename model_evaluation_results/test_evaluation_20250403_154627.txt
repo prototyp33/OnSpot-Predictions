@@ -1,0 +1,11 @@
+=== Test Set Evaluation Results ===
+
+Model: tuned_rf_model_20250403_154426.pkl
+Test Data: data/splits_full/test.csv
+Samples: 559
+
+Performance Metrics:
+  R² Score:     0.8163
+  MAE:          9.6630
+  RMSE:         11.8293
+  Inference Time: 0.0407 seconds
